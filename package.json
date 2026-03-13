@@ -1,0 +1,65 @@
+{
+  "name": "r-reindent",
+  "displayName": "R Reindent Lines",
+  "description": "RStudio-style vertical argument alignment for R, Quarto, and R Markdown files",
+  "version": "0.1.1",
+  "publisher": "r-reindent",
+  "engines": { "vscode": "^1.75.0" },
+  "categories": ["Formatters", "Programming Languages"],
+  "keywords": ["R", "Quarto", "RMarkdown", "indent", "format", "RStudio"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "r-reindent.reindentLines",
+        "title": "R: Reindent Lines",
+        "category": "R"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "r-reindent.reindentLines",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus && (editorLangId == r || editorLangId == rmd || editorLangId == quarto)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "r-reindent.reindentLines",
+          "when": "editorTextFocus && (editorLangId == r || editorLangId == rmd || editorLangId == quarto)",
+          "group": "1_modification"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "R Reindent",
+      "properties": {
+        "r-reindent.verticalAlign": {
+          "type": "boolean",
+          "default": true,
+          "description": "Vertically align function arguments to the column after the opening bracket (RStudio-style). When false, uses a single tab-stop instead."
+        },
+        "r-reindent.tabWidth": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Number of spaces per indent level (default: 2)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.0.0"
+  }
+}

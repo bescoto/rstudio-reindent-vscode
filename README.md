@@ -42,7 +42,7 @@ YAML front matter, and non-R fences are left completely unchanged.
 
 | Action | Shortcut |
 |---|---|
-| Reindent selection (or whole file) | `Ctrl+Shift+I` / `Cmd+Shift+I` |
+| Reindent selection (or whole file) | `Ctrl+I` / `Cmd+I` |
 | Command Palette | `R: Reindent Lines` |
 | Right-click context menu | `R: Reindent Lines` |
 | Format Selection (VSCode built-in) | `Shift+Alt+F` / `Ctrl+K Ctrl+F` |

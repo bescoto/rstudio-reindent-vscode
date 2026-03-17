@@ -27,6 +27,7 @@ interface BracketFrame {
   ch: string;          // ( [ {
   col: number;         // column in the REINDENTED line
   lineIndent: string;  // leading whitespace of the line containing this bracket
+  hanging: boolean;    // true if opener is the last token on its line → tab-stop mode
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -318,9 +319,11 @@ export function reindentLines(lines: string[], opts: ReindentOptions): string[] 
 
     // ── Update bracket stack from the REINDENTED line ────────────────────────
     const newIndent = getLineIndent(newLine);
+    const newLineCleaned = blankStringsAndComments(newLine);
     for (const tok of tokenizeLine(newLine)) {
       if (tok.kind === 'open') {
-        stack.push({ ch: tok.ch, col: tok.col, lineIndent: newIndent });
+        const hanging = newLineCleaned.slice(tok.col + 1).trim() === '';
+        stack.push({ ch: tok.ch, col: tok.col, lineIndent: newIndent, hanging });
       } else {
         const expected = MATCH_CLOSE[tok.ch];
         if (stack.length > 0 && stack[stack.length - 1].ch === expected) {

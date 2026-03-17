@@ -293,9 +293,11 @@ function reindentLines(lines, opts) {
         result[idx] = newLine;
         // ── Update bracket stack from the REINDENTED line ────────────────────────
         const newIndent = getLineIndent(newLine);
+        const newLineCleaned = blankStringsAndComments(newLine);
         for (const tok of tokenizeLine(newLine)) {
             if (tok.kind === 'open') {
-                stack.push({ ch: tok.ch, col: tok.col, lineIndent: newIndent });
+                const hanging = newLineCleaned.slice(tok.col + 1).trim() === '';
+                stack.push({ ch: tok.ch, col: tok.col, lineIndent: newIndent, hanging });
             }
             else {
                 const expected = MATCH_CLOSE[tok.ch];

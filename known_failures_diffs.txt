@@ -1,0 +1,1548 @@
+
+=== blocks/5 ===
+Expected:
+1: "fun_call(parameter1 = {"
+2: "  stuff1"
+3: "},"
+4: "{"
+5: "  stuff2"
+6: "}, parameter2 = {"
+7: "  stuff3"
+8: "}, {"
+9: "  stuff4"
+10: "},"
+11: "parameter3 ="
+12: "  stuff5 ~"
+13: "    stuff6 +"
+14: "    stuff7,"
+15: "argument)"
+Actual:
+1: "fun_call(parameter1 = {"
+2: "  stuff1"
+3: "},"
+4: "{"
+5: "  stuff2"
+6: "}, parameter2 = {"
+7: "  stuff3"
+8: "}, {"
+9: "  stuff4"
+10: "},"
+11: "parameter3 ="
+12: "stuff5 ~"
+13: "stuff6 +"
+14: "stuff7,"
+15: "argument)"
+Diffs:
+Line 12: Expected: "  stuff5 ~" | Actual: "stuff5 ~"
+Line 13: Expected: "    stuff6 +" | Actual: "stuff6 +"
+Line 14: Expected: "    stuff7," | Actual: "stuff7,"
+
+=== bracket-indexing/4 ===
+Expected:
+1: "{"
+2: "  object["
+3: "    fun_call("
+4: "      body"
+5: "    ),"
+6: "    argument["
+7: "    ("
+8: "      sub_argument"
+9: "    )"
+10: "    ]"
+11: "  ]"
+12: "}"
+Actual:
+1: "{"
+2: "  object["
+3: "    fun_call("
+4: "      body"
+5: "    ),"
+6: "    argument["
+7: "      ("
+8: "        sub_argument"
+9: "      )"
+10: "    ]"
+11: "  ]"
+12: "}"
+Diffs:
+Line 7: Expected: "    (" | Actual: "      ("
+Line 8: Expected: "      sub_argument" | Actual: "        sub_argument"
+Line 9: Expected: "    )" | Actual: "      )"
+
+=== bracket-indexing/5 ===
+Expected:
+1: "{"
+2: "  object["
+3: "    argument1,"
+4: "    argument2,"
+5: "    by = argument3"
+6: "  ]["
+7: "    argument4,"
+8: "    fun_call1(argument1,"
+9: "      argument2)"
+10: "    argument5"
+11: "  ]["
+12: "    argument6,"
+13: "    fun_call2("
+14: "      argument1,"
+15: "      argument2"
+16: "    )"
+17: "  ]"
+18: "}"
+Actual:
+1: "{"
+2: "  object["
+3: "    argument1,"
+4: "    argument2,"
+5: "    by = argument3"
+6: "  ]["
+7: "    argument4,"
+8: "    fun_call1(argument1,"
+9: "              argument2)"
+10: "    argument5"
+11: "  ]["
+12: "    argument6,"
+13: "    fun_call2("
+14: "      argument1,"
+15: "      argument2"
+16: "    )"
+17: "  ]"
+18: "}"
+Diffs:
+Line 9: Expected: "      argument2)" | Actual: "              argument2)"
+
+=== comments/7 ===
+Expected:
+1: "{"
+2: "  fun_call(lhs +"
+3: "             ### Comment"
+4: "             rhs"
+5: "  )"
+6: "}"
+Actual:
+1: "{"
+2: "  fun_call(lhs +"
+3: "           ### Comment"
+4: "           rhs"
+5: "  )"
+6: "}"
+Diffs:
+Line 3: Expected: "             ### Comment" | Actual: "           ### Comment"
+Line 4: Expected: "             rhs" | Actual: "           rhs"
+
+=== continuation-lines/10 ===
+Expected:
+1: "fun_call(argument1 %>%"
+2: "           stuff1, argument2 %>%"
+3: "                     stuff2, {"
+4: "                       stuff3 %>%"
+5: "                         stuff4"
+6: "                     } %>%"
+7: "                       stuff5,"
+8: "           argument3"
+9: ")"
+Actual:
+1: "fun_call(argument1 %>%"
+2: "         stuff1, argument2 %>%"
+3: "         stuff2, {"
+4: "           stuff3 %>%"
+5: "           stuff4"
+6: "         } %>%"
+7: "         stuff5,"
+8: "         argument3"
+9: ")"
+Diffs:
+Line 2: Expected: "           stuff1, argument2 %>%" | Actual: "         stuff1, argument2 %>%"
+Line 3: Expected: "                     stuff2, {" | Actual: "         stuff2, {"
+Line 4: Expected: "                       stuff3 %>%" | Actual: "           stuff3 %>%"
+Line 5: Expected: "                         stuff4" | Actual: "           stuff4"
+Line 6: Expected: "                     } %>%" | Actual: "         } %>%"
+Line 7: Expected: "                       stuff5," | Actual: "         stuff5,"
+Line 8: Expected: "           argument3" | Actual: "         argument3"
+
+=== continuation-lines/13 ===
+Expected:
+1: "{"
+2: "  (stuff) %>%"
+3: "    fun_call()"
+4: ""
+5: "  {stuff} %>%"
+6: "    fun_call()"
+7: "}"
+Actual:
+1: "{"
+2: "  (stuff) %>%"
+3: "  fun_call()"
+4: ""
+5: "  {stuff} %>%"
+6: "  fun_call()"
+7: "}"
+Diffs:
+Line 3: Expected: "    fun_call()" | Actual: "  fun_call()"
+Line 6: Expected: "    fun_call()" | Actual: "  fun_call()"
+
+=== continuation-lines/14 ===
+Expected:
+1: "{"
+2: "  object + ("
+3: "    stuff"
+4: "  ) %>%"
+5: "    fun_call()"
+6: ""
+7: "  object + {"
+8: "    stuff"
+9: "  } %>%"
+10: "    fun_call()"
+11: "}"
+Actual:
+1: "{"
+2: "  object + ("
+3: "    stuff"
+4: "  ) %>%"
+5: "  fun_call()"
+6: ""
+7: "  object + {"
+8: "    stuff"
+9: "  } %>%"
+10: "  fun_call()"
+11: "}"
+Diffs:
+Line 5: Expected: "    fun_call()" | Actual: "  fun_call()"
+Line 10: Expected: "    fun_call()" | Actual: "  fun_call()"
+
+=== continuation-lines/15 ===
+Expected:
+1: "object <-"
+2: "  stuff1 +"
+3: "  stuff2 ~"
+4: "    stuff3 +"
+5: "    stuff4 :="
+6: "      stuff5 +"
+7: "      stuff6 ="
+8: "        stuff7 +"
+9: "        stuff8"
+Actual:
+1: "object <-"
+2: "  stuff1 +"
+3: "  stuff2 ~"
+4: "  stuff3 +"
+5: "  stuff4 :="
+6: "  stuff5 +"
+7: "  stuff6 ="
+8: "  stuff7 +"
+9: "  stuff8"
+Diffs:
+Line 4: Expected: "    stuff3 +" | Actual: "  stuff3 +"
+Line 5: Expected: "    stuff4 :=" | Actual: "  stuff4 :="
+Line 6: Expected: "      stuff5 +" | Actual: "  stuff5 +"
+Line 7: Expected: "      stuff6 =" | Actual: "  stuff6 ="
+Line 8: Expected: "        stuff7 +" | Actual: "  stuff7 +"
+Line 9: Expected: "        stuff8" | Actual: "  stuff8"
+
+=== continuation-lines/16 ===
+Expected:
+1: "object <- stuff1 +"
+2: "  stuff2 + stuff3 +"
+3: "  stuff4 ~ stuff5 +"
+4: "    stuff6 + stuff7 +"
+5: "    stuff8 := stuff9 +"
+6: "      stuff10 + stuff11 +"
+7: "      stuff12 = stuff13 +"
+8: "        stuff14 + stuff15 +"
+9: "        stuff16"
+Actual:
+1: "object <- stuff1 +"
+2: "  stuff2 + stuff3 +"
+3: "  stuff4 ~ stuff5 +"
+4: "  stuff6 + stuff7 +"
+5: "  stuff8 := stuff9 +"
+6: "  stuff10 + stuff11 +"
+7: "  stuff12 = stuff13 +"
+8: "  stuff14 + stuff15 +"
+9: "  stuff16"
+Diffs:
+Line 4: Expected: "    stuff6 + stuff7 +" | Actual: "  stuff6 + stuff7 +"
+Line 5: Expected: "    stuff8 := stuff9 +" | Actual: "  stuff8 := stuff9 +"
+Line 6: Expected: "      stuff10 + stuff11 +" | Actual: "  stuff10 + stuff11 +"
+Line 7: Expected: "      stuff12 = stuff13 +" | Actual: "  stuff12 = stuff13 +"
+Line 8: Expected: "        stuff14 + stuff15 +" | Actual: "  stuff14 + stuff15 +"
+Line 9: Expected: "        stuff16" | Actual: "  stuff16"
+
+=== continuation-lines/18 ===
+Expected:
+1: "`object`$`elem` <- stuff1 +"
+2: "  stuff2"
+3: "`object`@`elem` <- stuff1 +"
+4: "  stuff2"
+Actual:
+1: "`object`$`elem` <- stuff1 +"
+2: "  stuff2"
+3: "  `object`@`elem` <- stuff1 +"
+4: "  stuff2"
+Diffs:
+Line 3: Expected: "`object`@`elem` <- stuff1 +" | Actual: "  `object`@`elem` <- stuff1 +"
+
+=== continuation-lines/19 ===
+Expected:
+1: "{"
+2: "  ## comment"
+3: "  object1 <-"
+4: "    object2"
+5: "}"
+Actual:
+1: "{"
+2: "  ## comment"
+3: "  object1 <-"
+4: "  object2"
+5: "}"
+Diffs:
+Line 4: Expected: "    object2" | Actual: "  object2"
+
+=== continuation-lines/2 ===
+Expected:
+1: "{"
+2: "  stuff1 %>%"
+3: "    stuff2 %>%"
+4: "    stuff3"
+5: "} %>%"
+6: "  stuff4 %>%"
+7: "  stuff5"
+Actual:
+1: "{"
+2: "  stuff1 %>%"
+3: "  stuff2 %>%"
+4: "  stuff3"
+5: "} %>%"
+6: "stuff4 %>%"
+7: "  stuff5"
+Diffs:
+Line 3: Expected: "    stuff2 %>%" | Actual: "  stuff2 %>%"
+Line 4: Expected: "    stuff3" | Actual: "  stuff3"
+Line 6: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
+
+=== continuation-lines/20 ===
+Expected:
+1: "fun_call(stuff1 + stuff2 +"
+2: "           stuff3 +"
+3: "           (stuff4 + stuff5 +"
+4: "              stuff6) +"
+5: "           object[stuff7 +"
+6: "                    stuff8] +"
+7: "           {stuff9 +"
+8: "              stuff10})"
+Actual:
+1: "fun_call(stuff1 + stuff2 +"
+2: "         stuff3 +"
+3: "         (stuff4 + stuff5 +"
+4: "          stuff6) +"
+5: "         object[stuff7 +"
+6: "           stuff8] +"
+7: "         {stuff9 +"
+8: "           stuff10})"
+Diffs:
+Line 2: Expected: "           stuff3 +" | Actual: "         stuff3 +"
+Line 3: Expected: "           (stuff4 + stuff5 +" | Actual: "         (stuff4 + stuff5 +"
+Line 4: Expected: "              stuff6) +" | Actual: "          stuff6) +"
+Line 5: Expected: "           object[stuff7 +" | Actual: "         object[stuff7 +"
+Line 6: Expected: "                    stuff8] +" | Actual: "           stuff8] +"
+Line 7: Expected: "           {stuff9 +" | Actual: "         {stuff9 +"
+Line 8: Expected: "              stuff10})" | Actual: "           stuff10})"
+
+=== continuation-lines/21 ===
+Expected:
+1: "object %>% fun_call({"
+2: "  stuff1"
+3: "}) %>%"
+4: "  stuff2"
+Actual:
+1: "object %>% fun_call({"
+2: "  stuff1"
+3: "}) %>%"
+4: "stuff2"
+Diffs:
+Line 4: Expected: "  stuff2" | Actual: "stuff2"
+
+=== continuation-lines/25 ===
+Expected:
+1: "fun_call1(argument, fun_call2("
+2: "  stuff1"
+3: ") +"
+4: "  stuff2)"
+Actual:
+1: "fun_call1(argument, fun_call2("
+2: "  stuff1"
+3: ") +"
+4: "stuff2)"
+Diffs:
+Line 4: Expected: "  stuff2)" | Actual: "stuff2)"
+
+=== continuation-lines/27 ===
+Expected:
+1: "fun_call1(fun_call2(fun_call3("
+2: "  argument"
+3: "))) %>%"
+4: "  fun_call2()"
+Actual:
+1: "fun_call1(fun_call2(fun_call3("
+2: "  argument"
+3: "))) %>%"
+4: "fun_call2()"
+Diffs:
+Line 4: Expected: "  fun_call2()" | Actual: "fun_call2()"
+
+=== continuation-lines/28 ===
+Expected:
+1: "fun_call(argument1 %>%"
+2: "           stuff,"
+3: "  argument2)"
+Actual:
+1: "fun_call(argument1 %>%"
+2: "         stuff,"
+3: "         argument2)"
+Diffs:
+Line 2: Expected: "           stuff," | Actual: "         stuff,"
+Line 3: Expected: "  argument2)" | Actual: "         argument2)"
+
+=== continuation-lines/29 ===
+Expected:
+1: "fun_call(stuff1 :="
+2: "           (stuff2),"
+3: "  argument)"
+Actual:
+1: "fun_call(stuff1 :="
+2: "         (stuff2),"
+3: "         argument)"
+Diffs:
+Line 2: Expected: "           (stuff2)," | Actual: "         (stuff2),"
+Line 3: Expected: "  argument)" | Actual: "         argument)"
+
+=== continuation-lines/3 ===
+Expected:
+1: "("
+2: "  stuff1 %>%"
+3: "    stuff2 %>%"
+4: "    stuff3"
+5: ") %>%"
+6: "  stuff4 %>%"
+7: "  stuff5"
+Actual:
+1: "("
+2: "  stuff1 %>%"
+3: "  stuff2 %>%"
+4: "  stuff3"
+5: ") %>%"
+6: "stuff4 %>%"
+7: "  stuff5"
+Diffs:
+Line 3: Expected: "    stuff2 %>%" | Actual: "  stuff2 %>%"
+Line 4: Expected: "    stuff3" | Actual: "  stuff3"
+Line 6: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
+
+=== continuation-lines/30 ===
+Expected:
+1: "fun_call1(fun_call2("
+2: "  fun_call3()) %>%"
+3: "    stuff)"
+Actual:
+1: "fun_call1(fun_call2("
+2: "  fun_call3()) %>%"
+3: "stuff)"
+Diffs:
+Line 3: Expected: "    stuff)" | Actual: "stuff)"
+
+=== continuation-lines/31 ===
+Expected:
+1: "fun_call(object1 + object2 ~ object3 +"
+2: "           object4 + object5 := object6 +"
+3: "             object7,"
+4: "           argument)"
+Actual:
+1: "fun_call(object1 + object2 ~ object3 +"
+2: "         object4 + object5 := object6 +"
+3: "         object7,"
+4: "         argument)"
+Diffs:
+Line 2: Expected: "           object4 + object5 := object6 +" | Actual: "         object4 + object5 := object6 +"
+Line 3: Expected: "             object7," | Actual: "         object7,"
+Line 4: Expected: "           argument)" | Actual: "         argument)"
+
+=== continuation-lines/32 ===
+Expected:
+1: "fun_call(object ~"
+2: "           )"
+Actual:
+1: "fun_call(object ~"
+2: ")"
+Diffs:
+Line 2: Expected: "           )" | Actual: ")"
+
+=== continuation-lines/33 ===
+Expected:
+1: "fun_call(object +"
+2: "           )"
+Actual:
+1: "fun_call(object +"
+2: ")"
+Diffs:
+Line 2: Expected: "           )" | Actual: ")"
+
+=== continuation-lines/34 ===
+Expected:
+1: "fun_call(object[index1]$element[index2][index3]@attribute +"
+2: "           stuff)"
+Actual:
+1: "fun_call(object[index1]$element[index2][index3]@attribute +"
+2: "         stuff)"
+Diffs:
+Line 2: Expected: "           stuff)" | Actual: "         stuff)"
+
+=== continuation-lines/35a ===
+Expected:
+1: "fun_call(argument <-"
+2: "           object)"
+Actual:
+1: "fun_call(argument <-"
+2: "         object)"
+Diffs:
+Line 2: Expected: "           object)" | Actual: "         object)"
+
+=== continuation-lines/35b ===
+Expected:
+1: "fun_call(argument <<-"
+2: "           object)"
+Actual:
+1: "fun_call(argument <<-"
+2: "         object)"
+Diffs:
+Line 2: Expected: "           object)" | Actual: "         object)"
+
+=== continuation-lines/36 ===
+Expected:
+1: "funcall(!stuff1 ||"
+2: "          stuff2)"
+Actual:
+1: "funcall(!stuff1 ||"
+2: "        stuff2)"
+Diffs:
+Line 2: Expected: "          stuff2)" | Actual: "        stuff2)"
+
+=== continuation-lines/37 ===
+Expected:
+1: "fun_call({"
+2: ""
+3: "  stuff <-"
+4: "    namespace:::fun_call() %>%"
+5: "    fun_call()"
+6: ""
+7: "  stuff"
+8: "})"
+9: ""
+10: "fun_call({"
+11: "  stuff <-"
+12: "    namespace::fun_call() %>%"
+13: "    fun_call()"
+14: "  stuff"
+15: "})"
+Actual:
+1: "fun_call({"
+2: ""
+3: "  stuff <-"
+4: "  namespace:::fun_call() %>%"
+5: "  fun_call()"
+6: ""
+7: "  stuff"
+8: "})"
+9: ""
+10: "fun_call({"
+11: "  stuff <-"
+12: "  namespace::fun_call() %>%"
+13: "  fun_call()"
+14: "  stuff"
+15: "})"
+Diffs:
+Line 4: Expected: "    namespace:::fun_call() %>%" | Actual: "  namespace:::fun_call() %>%"
+Line 5: Expected: "    fun_call()" | Actual: "  fun_call()"
+Line 12: Expected: "    namespace::fun_call() %>%" | Actual: "  namespace::fun_call() %>%"
+Line 13: Expected: "    fun_call()" | Actual: "  fun_call()"
+
+=== continuation-lines/4 ===
+Expected:
+1: "object["
+2: "  stuff1 %>%"
+3: "    stuff2 %>%"
+4: "    stuff3"
+5: "] %>%"
+6: "  stuff4 %>%"
+7: "  stuff5"
+Actual:
+1: "object["
+2: "  stuff1 %>%"
+3: "  stuff2 %>%"
+4: "  stuff3"
+5: "] %>%"
+6: "stuff4 %>%"
+7: "  stuff5"
+Diffs:
+Line 3: Expected: "    stuff2 %>%" | Actual: "  stuff2 %>%"
+Line 4: Expected: "    stuff3" | Actual: "  stuff3"
+Line 6: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
+
+=== continuation-lines/40 ===
+Expected:
+1: "\\(x) x +"
+2: "       2"
+Actual:
+1: "\\(x) x +"
+2: "  2"
+Diffs:
+Line 2: Expected: "       2" | Actual: "  2"
+
+=== continuation-lines/5 ===
+Expected:
+1: "stuff1 %>%"
+2: "  stuff2 %>%"
+3: "  if (condition) {"
+4: "    stuff3 %>%"
+5: "      stuff4 %>%"
+6: "      stuff5"
+7: "  } else {"
+8: "    stuff6 %>%"
+9: "      stuff7 %>%"
+10: "      stuff8"
+11: "  } %>%"
+12: "  stuff9 %>%"
+13: "  stuff10"
+Actual:
+1: "stuff1 %>%"
+2: "  stuff2 %>%"
+3: "  if (condition) {"
+4: "    stuff3 %>%"
+5: "    stuff4 %>%"
+6: "    stuff5"
+7: "  } else {"
+8: "    stuff6 %>%"
+9: "    stuff7 %>%"
+10: "    stuff8"
+11: "  } %>%"
+12: "  stuff9 %>%"
+13: "  stuff10"
+Diffs:
+Line 5: Expected: "      stuff4 %>%" | Actual: "    stuff4 %>%"
+Line 6: Expected: "      stuff5" | Actual: "    stuff5"
+Line 9: Expected: "      stuff7 %>%" | Actual: "    stuff7 %>%"
+Line 10: Expected: "      stuff8" | Actual: "    stuff8"
+
+=== continuation-lines/6 ===
+Expected:
+1: "stuff[stuff1 %>%"
+2: "        stuff2 %>%"
+3: "        stuff3] %>%"
+4: "  stuff4 %>%"
+5: "  stuff5"
+Actual:
+1: "stuff[stuff1 %>%"
+2: "  stuff2 %>%"
+3: "      stuff3] %>%"
+4: "stuff4 %>%"
+5: "  stuff5"
+Diffs:
+Line 2: Expected: "        stuff2 %>%" | Actual: "  stuff2 %>%"
+Line 3: Expected: "        stuff3] %>%" | Actual: "      stuff3] %>%"
+Line 4: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
+
+=== continuation-lines/7 ===
+Expected:
+1: "ggplot() +"
+2: "  geom(lhs -"
+3: "         rhs"
+4: "  ) +"
+5: "  geom()"
+Actual:
+1: "ggplot() +"
+2: "  geom(lhs -"
+3: "       rhs"
+4: "  ) +"
+5: "  geom()"
+Diffs:
+Line 3: Expected: "         rhs" | Actual: "       rhs"
+
+=== continuation-lines/8 ===
+Expected:
+1: "{"
+2: "  ggplot() +"
+3: "    geom1(argument1,"
+4: "      argument2 = ("
+5: "        stuff1"
+6: "      ) -"
+7: "        stuff2) +"
+8: "    geom2() +"
+9: "    geom3()"
+10: "}"
+Actual:
+1: "{"
+2: "  ggplot() +"
+3: "  geom1(argument1,"
+4: "        argument2 = ("
+5: "          stuff1"
+6: "        ) -"
+7: "        stuff2) +"
+8: "  geom2() +"
+9: "  geom3()"
+10: "}"
+Diffs:
+Line 3: Expected: "    geom1(argument1," | Actual: "  geom1(argument1,"
+Line 4: Expected: "      argument2 = (" | Actual: "        argument2 = ("
+Line 5: Expected: "        stuff1" | Actual: "          stuff1"
+Line 6: Expected: "      ) -" | Actual: "        ) -"
+Line 8: Expected: "    geom2() +" | Actual: "  geom2() +"
+Line 9: Expected: "    geom3()" | Actual: "  geom3()"
+
+=== continuation-lines/9 ===
+Expected:
+1: "stuff +"
+2: "  fun_call(parameter = argument1,"
+3: "    fun_call((stuff1 - stuff2 +"
+4: "                stuff3"
+5: "    ) /"
+6: "      stuff4)"
+7: "  ) /"
+8: "  stuff5"
+9: ""
+10: "fun_call(arg1 +"
+11: "           arg2, arg3 +"
+12: "                   arg4)"
+Actual:
+1: "stuff +"
+2: "  fun_call(parameter = argument1,"
+3: "           fun_call((stuff1 - stuff2 +"
+4: "                     stuff3"
+5: "           ) /"
+6: "                    stuff4)"
+7: "  ) /"
+8: "  stuff5"
+9: ""
+10: "fun_call(arg1 +"
+11: "         arg2, arg3 +"
+12: "         arg4)"
+Diffs:
+Line 3: Expected: "    fun_call((stuff1 - stuff2 +" | Actual: "           fun_call((stuff1 - stuff2 +"
+Line 4: Expected: "                stuff3" | Actual: "                     stuff3"
+Line 5: Expected: "    ) /" | Actual: "           ) /"
+Line 6: Expected: "      stuff4)" | Actual: "                    stuff4)"
+Line 11: Expected: "           arg2, arg3 +" | Actual: "         arg2, arg3 +"
+Line 12: Expected: "                   arg4)" | Actual: "         arg4)"
+
+=== control-flow/10a ===
+Expected:
+1: "{"
+2: "  object <-"
+3: "    if (condition) stuff1"
+4: "  else stuff2"
+5: "}"
+Actual:
+1: "{"
+2: "  object <-"
+3: "  if (condition) stuff1"
+4: "  else stuff2"
+5: "}"
+Diffs:
+Line 3: Expected: "    if (condition) stuff1" | Actual: "  if (condition) stuff1"
+
+=== control-flow/10b ===
+Expected:
+1: "{"
+2: "  object <-"
+3: "    if (condition) fun_call("
+4: "      argument1,"
+5: "      argument2"
+6: "    )"
+7: "  else stuff"
+8: "}"
+Actual:
+1: "{"
+2: "  object <-"
+3: "  if (condition) fun_call("
+4: "    argument1,"
+5: "    argument2"
+6: "  )"
+7: "  else stuff"
+8: "}"
+Diffs:
+Line 3: Expected: "    if (condition) fun_call(" | Actual: "  if (condition) fun_call("
+Line 4: Expected: "      argument1," | Actual: "    argument1,"
+Line 5: Expected: "      argument2" | Actual: "    argument2"
+Line 6: Expected: "    )" | Actual: "  )"
+
+=== control-flow/11 ===
+Expected:
+1: "{"
+2: "  fun_call(parameter ="
+3: "             if (condition)"
+4: "               stuff1"
+5: "    else"
+6: "      stuff2"
+7: "  )"
+8: "}"
+Actual:
+1: "{"
+2: "  fun_call(parameter ="
+3: "           if (condition)"
+4: "           stuff1"
+5: "           else"
+6: "           stuff2"
+7: "  )"
+8: "}"
+Diffs:
+Line 3: Expected: "             if (condition)" | Actual: "           if (condition)"
+Line 4: Expected: "               stuff1" | Actual: "           stuff1"
+Line 5: Expected: "    else" | Actual: "           else"
+Line 6: Expected: "      stuff2" | Actual: "           stuff2"
+
+=== control-flow/12 ===
+Expected:
+1: "{"
+2: "  if (condition1) {"
+3: "    stuff1"
+4: "  }"
+5: "  else if (condition2)"
+6: "    stuff2"
+7: "  else if (condition3) {"
+8: "    stuff3"
+9: "  } else if (condition4)"
+10: "    stuff4"
+11: "  else"
+12: "    stuff5"
+13: "}"
+Actual:
+1: "{"
+2: "  if (condition1) {"
+3: "    stuff1"
+4: "  }"
+5: "  else if (condition2)"
+6: "  stuff2"
+7: "  else if (condition3) {"
+8: "    stuff3"
+9: "  } else if (condition4)"
+10: "  stuff4"
+11: "  else"
+12: "  stuff5"
+13: "}"
+Diffs:
+Line 6: Expected: "    stuff2" | Actual: "  stuff2"
+Line 10: Expected: "    stuff4" | Actual: "  stuff4"
+Line 12: Expected: "    stuff5" | Actual: "  stuff5"
+
+=== control-flow/14 ===
+Expected:
+1: "fun_call("
+2: "  argument,"
+3: "  parameter ="
+4: "    if (condition1)"
+5: "      stuff1"
+6: "  else if (condition2)"
+7: "    stuff3"
+8: "  else"
+9: "    stuff2"
+10: ")"
+Actual:
+1: "fun_call("
+2: "  argument,"
+3: "  parameter ="
+4: "  if (condition1)"
+5: "  stuff1"
+6: "  else if (condition2)"
+7: "  stuff3"
+8: "  else"
+9: "  stuff2"
+10: ")"
+Diffs:
+Line 4: Expected: "    if (condition1)" | Actual: "  if (condition1)"
+Line 5: Expected: "      stuff1" | Actual: "  stuff1"
+Line 7: Expected: "    stuff3" | Actual: "  stuff3"
+Line 9: Expected: "    stuff2" | Actual: "  stuff2"
+
+=== control-flow/16 ===
+Expected:
+1: "object <- fun_call(argument, if (condition)"
+2: "  stuff1"
+3: "  else if (condition2)"
+4: "    stuff2"
+5: ")"
+Actual:
+1: "object <- fun_call(argument, if (condition)"
+2: "                   stuff1"
+3: "                   else if (condition2)"
+4: "                   stuff2"
+5: ")"
+Diffs:
+Line 2: Expected: "  stuff1" | Actual: "                   stuff1"
+Line 3: Expected: "  else if (condition2)" | Actual: "                   else if (condition2)"
+Line 4: Expected: "    stuff2" | Actual: "                   stuff2"
+
+=== control-flow/17 ===
+Expected:
+1: "while(condition)"
+2: "  stuff"
+Actual:
+1: "while(condition)"
+2: "stuff"
+Diffs:
+Line 2: Expected: "  stuff" | Actual: "stuff"
+
+=== control-flow/18 ===
+Expected:
+1: "if (condition1)"
+2: "  stuff1"
+3: "else"
+4: "  if (condition2) {"
+5: "    stuff2"
+6: "  }"
+Actual:
+1: "if (condition1)"
+2: "stuff1"
+3: "else"
+4: "if (condition2) {"
+5: "  stuff2"
+6: "}"
+Diffs:
+Line 2: Expected: "  stuff1" | Actual: "stuff1"
+Line 4: Expected: "  if (condition2) {" | Actual: "if (condition2) {"
+Line 5: Expected: "    stuff2" | Actual: "  stuff2"
+Line 6: Expected: "  }" | Actual: "}"
+
+=== control-flow/19 ===
+Expected:
+1: "object <-"
+2: "  if (condition)"
+3: "    fun_call()[index]"
+4: "else"
+5: "  stuff"
+Actual:
+1: "object <-"
+2: "  if (condition)"
+3: "  fun_call()[index]"
+4: "  else"
+5: "  stuff"
+Diffs:
+Line 3: Expected: "    fun_call()[index]" | Actual: "  fun_call()[index]"
+Line 4: Expected: "else" | Actual: "  else"
+
+=== control-flow/20 ===
+Expected:
+1: "funcall({"
+2: "  if (test1)"
+3: "    stuff1"
+4: "  if (test2)"
+5: "    stuff2"
+6: "})"
+Actual:
+1: "funcall({"
+2: "  if (test1)"
+3: "  stuff1"
+4: "  if (test2)"
+5: "  stuff2"
+6: "})"
+Diffs:
+Line 3: Expected: "    stuff1" | Actual: "  stuff1"
+Line 5: Expected: "    stuff2" | Actual: "  stuff2"
+
+=== control-flow/22 ===
+Expected:
+1: "if (cond1)"
+2: "  if (cond2)"
+3: "    if (cond3)"
+4: "      stuff1"
+5: "else if (cond4)"
+6: "  stuff2"
+7: "else"
+8: "  if (cond5)"
+9: "    stuff3"
+10: "else"
+11: "  stuff4"
+12: "else if (cond6)"
+13: "  stuff5"
+14: "else"
+15: "  if (cond7)"
+16: "    stuff6"
+17: "else"
+18: "  stuff7"
+19: "else if (cond8)"
+20: "  stuff8"
+21: "else"
+22: "  if (cond9)"
+23: "    stuff9"
+24: "else"
+25: "  stuff10"
+Actual:
+1: "if (cond1)"
+2: "if (cond2)"
+3: "if (cond3)"
+4: "stuff1"
+5: "else if (cond4)"
+6: "stuff2"
+7: "else"
+8: "if (cond5)"
+9: "stuff3"
+10: "else"
+11: "stuff4"
+12: "else if (cond6)"
+13: "stuff5"
+14: "else"
+15: "if (cond7)"
+16: "stuff6"
+17: "else"
+18: "stuff7"
+19: "else if (cond8)"
+20: "stuff8"
+21: "else"
+22: "if (cond9)"
+23: "stuff9"
+24: "else"
+25: "stuff10"
+Diffs:
+Line 2: Expected: "  if (cond2)" | Actual: "if (cond2)"
+Line 3: Expected: "    if (cond3)" | Actual: "if (cond3)"
+Line 4: Expected: "      stuff1" | Actual: "stuff1"
+Line 6: Expected: "  stuff2" | Actual: "stuff2"
+Line 8: Expected: "  if (cond5)" | Actual: "if (cond5)"
+Line 9: Expected: "    stuff3" | Actual: "stuff3"
+Line 11: Expected: "  stuff4" | Actual: "stuff4"
+Line 13: Expected: "  stuff5" | Actual: "stuff5"
+Line 15: Expected: "  if (cond7)" | Actual: "if (cond7)"
+Line 16: Expected: "    stuff6" | Actual: "stuff6"
+Line 18: Expected: "  stuff7" | Actual: "stuff7"
+Line 20: Expected: "  stuff8" | Actual: "stuff8"
+Line 22: Expected: "  if (cond9)" | Actual: "if (cond9)"
+Line 23: Expected: "    stuff9" | Actual: "stuff9"
+Line 25: Expected: "  stuff10" | Actual: "stuff10"
+
+=== control-flow/23 ===
+Expected:
+1: "if (cond1)"
+2: "  if (cond2)"
+3: "    for (sequence1)"
+4: "      if (cond3)"
+5: "        stuff1"
+6: "else"
+7: "  stuff2"
+8: "else if (cond4)"
+9: "  for (sequence2)"
+10: "    stuff3"
+11: "else"
+12: "  if (cond5)"
+13: "    fun_call("
+14: "      argument"
+15: "    )"
+16: "else"
+17: "  stuff5"
+18: "else"
+19: "  stuff6"
+Actual:
+1: "if (cond1)"
+2: "if (cond2)"
+3: "for (sequence1)"
+4: "if (cond3)"
+5: "stuff1"
+6: "else"
+7: "stuff2"
+8: "else if (cond4)"
+9: "for (sequence2)"
+10: "stuff3"
+11: "else"
+12: "if (cond5)"
+13: "fun_call("
+14: "  argument"
+15: ")"
+16: "else"
+17: "stuff5"
+18: "else"
+19: "stuff6"
+Diffs:
+Line 2: Expected: "  if (cond2)" | Actual: "if (cond2)"
+Line 3: Expected: "    for (sequence1)" | Actual: "for (sequence1)"
+Line 4: Expected: "      if (cond3)" | Actual: "if (cond3)"
+Line 5: Expected: "        stuff1" | Actual: "stuff1"
+Line 7: Expected: "  stuff2" | Actual: "stuff2"
+Line 9: Expected: "  for (sequence2)" | Actual: "for (sequence2)"
+Line 10: Expected: "    stuff3" | Actual: "stuff3"
+Line 12: Expected: "  if (cond5)" | Actual: "if (cond5)"
+Line 13: Expected: "    fun_call(" | Actual: "fun_call("
+Line 14: Expected: "      argument" | Actual: "  argument"
+Line 15: Expected: "    )" | Actual: ")"
+Line 17: Expected: "  stuff5" | Actual: "stuff5"
+Line 19: Expected: "  stuff6" | Actual: "stuff6"
+
+=== control-flow/24 ===
+Expected:
+1: "object <- if(cond)"
+2: "            stuff1"
+3: "else"
+4: "  stuff2"
+Actual:
+1: "object <- if(cond)"
+2: "stuff1"
+3: "else"
+4: "stuff2"
+Diffs:
+Line 2: Expected: "            stuff1" | Actual: "stuff1"
+Line 4: Expected: "  stuff2" | Actual: "stuff2"
+
+=== control-flow/26 ===
+Expected:
+1: "{"
+2: "  if (condition1)"
+3: "    stuff1"
+4: "  else if (condition2) {"
+5: "    stuff2"
+6: "  }"
+7: "  else if (condition3)"
+8: "    stuff3"
+9: "}"
+Actual:
+1: "{"
+2: "  if (condition1)"
+3: "  stuff1"
+4: "  else if (condition2) {"
+5: "    stuff2"
+6: "  }"
+7: "  else if (condition3)"
+8: "  stuff3"
+9: "}"
+Diffs:
+Line 3: Expected: "    stuff1" | Actual: "  stuff1"
+Line 8: Expected: "    stuff3" | Actual: "  stuff3"
+
+=== control-flow/28 ===
+Expected:
+1: "if (condition)"
+2: "  object <-"
+3: "    stuff"
+Actual:
+1: "if (condition)"
+2: "object <-"
+3: "  stuff"
+Diffs:
+Line 2: Expected: "  object <-" | Actual: "object <-"
+Line 3: Expected: "    stuff" | Actual: "  stuff"
+
+=== control-flow/29 ===
+Expected:
+1: "if (condition1)"
+2: "  object <-"
+3: "    if (condition2)"
+4: "      stuff1"
+5: "else"
+6: "  stuff2"
+7: "else"
+8: "  stuff3"
+Actual:
+1: "if (condition1)"
+2: "object <-"
+3: "  if (condition2)"
+4: "  stuff1"
+5: "  else"
+6: "  stuff2"
+7: "  else"
+8: "  stuff3"
+Diffs:
+Line 2: Expected: "  object <-" | Actual: "object <-"
+Line 3: Expected: "    if (condition2)" | Actual: "  if (condition2)"
+Line 4: Expected: "      stuff1" | Actual: "  stuff1"
+Line 5: Expected: "else" | Actual: "  else"
+Line 7: Expected: "else" | Actual: "  else"
+
+=== control-flow/7 ===
+Expected:
+1: "if (condition)"
+2: "  stuff"
+Actual:
+1: "if (condition)"
+2: "stuff"
+Diffs:
+Line 2: Expected: "  stuff" | Actual: "stuff"
+
+=== control-flow/8 ===
+Expected:
+1: "for (sequence)"
+2: "  stuff"
+Actual:
+1: "for (sequence)"
+2: "stuff"
+Diffs:
+Line 2: Expected: "  stuff" | Actual: "stuff"
+
+=== function-calls/11 ===
+Expected:
+1: "{"
+2: "  fun_call1("
+3: "    fun_call2 (argument1, argument2,"
+4: "      parameter = fun_call3("
+5: "        argument3,"
+6: "        argument4"
+7: "      ), function(x) {"
+8: "        body"
+9: "      },"
+10: "      argument5,"
+11: "      fun_call4("
+12: "        argument6"
+13: "      ),"
+14: "      argument7"
+15: "    ), {"
+16: "      stuff"
+17: "    },"
+18: "    argument8"
+19: "  )"
+20: "}"
+Actual:
+1: "{"
+2: "  fun_call1("
+3: "    fun_call2 (argument1, argument2,"
+4: "               parameter = fun_call3("
+5: "                 argument3,"
+6: "                 argument4"
+7: "               ), function(x) {"
+8: "                 body"
+9: "               },"
+10: "               argument5,"
+11: "               fun_call4("
+12: "                 argument6"
+13: "               ),"
+14: "               argument7"
+15: "    ), {"
+16: "      stuff"
+17: "    },"
+18: "    argument8"
+19: "  )"
+20: "}"
+Diffs:
+Line 4: Expected: "      parameter = fun_call3(" | Actual: "               parameter = fun_call3("
+Line 5: Expected: "        argument3," | Actual: "                 argument3,"
+Line 6: Expected: "        argument4" | Actual: "                 argument4"
+Line 7: Expected: "      ), function(x) {" | Actual: "               ), function(x) {"
+Line 8: Expected: "        body" | Actual: "                 body"
+Line 9: Expected: "      }," | Actual: "               },"
+Line 10: Expected: "      argument5," | Actual: "               argument5,"
+Line 11: Expected: "      fun_call4(" | Actual: "               fun_call4("
+Line 12: Expected: "        argument6" | Actual: "                 argument6"
+Line 13: Expected: "      )," | Actual: "               ),"
+Line 14: Expected: "      argument7" | Actual: "               argument7"
+
+=== function-calls/18 ===
+Expected:
+1: "fun_call(argument1 %>%"
+2: "           stuff,"
+3: "  argument2)"
+Actual:
+1: "fun_call(argument1 %>%"
+2: "         stuff,"
+3: "         argument2)"
+Diffs:
+Line 2: Expected: "           stuff," | Actual: "         stuff,"
+Line 3: Expected: "  argument2)" | Actual: "         argument2)"
+
+=== function-calls/19 ===
+Expected:
+1: "fun_call(argument,"
+2: "  )"
+Actual:
+1: "fun_call(argument,"
+2: ")"
+Diffs:
+Line 2: Expected: "  )" | Actual: ")"
+
+=== function-calls/8 ===
+Expected:
+1: "fun_call(argument1"
+2: ", argument2"
+3: ", argument3,"
+4: "  argument4, ("
+5: "    stuff1"
+6: "  ),"
+7: "  argument5, ("
+8: "    stuff2"
+9: "  )"
+10: " ,"
+11: "  argument6"
+12: ")"
+Actual:
+1: "fun_call(argument1"
+2: "         , argument2"
+3: "         , argument3,"
+4: "         argument4, ("
+5: "           stuff1"
+6: "         ),"
+7: "         argument5, ("
+8: "           stuff2"
+9: "         )"
+10: "         ,"
+11: "         argument6"
+12: ")"
+Diffs:
+Line 2: Expected: ", argument2" | Actual: "         , argument2"
+Line 3: Expected: ", argument3," | Actual: "         , argument3,"
+Line 4: Expected: "  argument4, (" | Actual: "         argument4, ("
+Line 5: Expected: "    stuff1" | Actual: "           stuff1"
+Line 6: Expected: "  )," | Actual: "         ),"
+Line 7: Expected: "  argument5, (" | Actual: "         argument5, ("
+Line 8: Expected: "    stuff2" | Actual: "           stuff2"
+Line 9: Expected: "  )" | Actual: "         )"
+Line 10: Expected: " ," | Actual: "         ,"
+Line 11: Expected: "  argument6" | Actual: "         argument6"
+
+=== function-calls/9 ===
+Expected:
+1: "fun_call(parameter ="
+2: "           fun_argument("
+3: "             sub_argument"
+4: "           ),"
+5: "  argument"
+6: ")"
+Actual:
+1: "fun_call(parameter ="
+2: "         fun_argument("
+3: "           sub_argument"
+4: "         ),"
+5: "         argument"
+6: ")"
+Diffs:
+Line 2: Expected: "           fun_argument(" | Actual: "         fun_argument("
+Line 3: Expected: "             sub_argument" | Actual: "           sub_argument"
+Line 4: Expected: "           )," | Actual: "         ),"
+Line 5: Expected: "  argument" | Actual: "         argument"
+
+=== function-declarations/13 ===
+Expected:
+1: "fun_call(object :="
+2: "           function()"
+3: "           {"
+4: "             body"
+5: "           })"
+Actual:
+1: "fun_call(object :="
+2: "         function()"
+3: "         {"
+4: "           body"
+5: "         })"
+Diffs:
+Line 2: Expected: "           function()" | Actual: "         function()"
+Line 3: Expected: "           {" | Actual: "         {"
+Line 4: Expected: "             body" | Actual: "           body"
+Line 5: Expected: "           })" | Actual: "         })"
+
+=== function-declarations/14 ===
+Expected:
+1: "fun_call(argument,"
+2: "  function(x)"
+3: "    stuff"
+4: ")"
+Actual:
+1: "fun_call(argument,"
+2: "         function(x)"
+3: "         stuff"
+4: ")"
+Diffs:
+Line 2: Expected: "  function(x)" | Actual: "         function(x)"
+Line 3: Expected: "    stuff" | Actual: "         stuff"
+
+=== function-declarations/2 ===
+Expected:
+1: "{"
+2: "  function("
+3: "           argument1,"
+4: "           argument2"
+5: "           )"
+6: "  {"
+7: "    body"
+8: "  }"
+9: "}"
+Actual:
+1: "{"
+2: "  function("
+3: "    argument1,"
+4: "    argument2"
+5: "  )"
+6: "  {"
+7: "    body"
+8: "  }"
+9: "}"
+Diffs:
+Line 3: Expected: "           argument1," | Actual: "    argument1,"
+Line 4: Expected: "           argument2" | Actual: "    argument2"
+Line 5: Expected: "           )" | Actual: "  )"
+
+=== function-declarations/3 ===
+Expected:
+1: "function(argument_fun(sub_argument1,"
+2: "  sub_argument2),"
+3: "  argument) {}"
+Actual:
+1: "function(argument_fun(sub_argument1,"
+2: "                      sub_argument2),"
+3: "         argument) {}"
+Diffs:
+Line 2: Expected: "  sub_argument2)," | Actual: "                      sub_argument2),"
+Line 3: Expected: "  argument) {}" | Actual: "         argument) {}"
+
+=== function-declarations/4 ===
+Expected:
+1: "function(argument1, parameter = fun_call("
+2: "  sub_argument),"
+3: "  argument2) {}"
+Actual:
+1: "function(argument1, parameter = fun_call("
+2: "  sub_argument),"
+3: "argument2) {}"
+Diffs:
+Line 3: Expected: "  argument2) {}" | Actual: "argument2) {}"
+
+=== function-declarations/5 ===
+Expected:
+1: "function()"
+2: ""
+3: "  function() body"
+Actual:
+1: "function()"
+2: ""
+3: "function() body"
+Diffs:
+Line 3: Expected: "  function() body" | Actual: "function() body"
+
+=== function-declarations/6c ===
+Expected:
+1: "object ="
+2: "  function()"
+3: "  {"
+4: "    body"
+5: "  }"
+Actual:
+1: "object ="
+2: "function()"
+3: "{"
+4: "  body"
+5: "}"
+Diffs:
+Line 2: Expected: "  function()" | Actual: "function()"
+Line 3: Expected: "  {" | Actual: "{"
+Line 4: Expected: "    body" | Actual: "  body"
+Line 5: Expected: "  }" | Actual: "}"
+
+=== function-declarations/8 ===
+Expected:
+1: "{"
+2: "  fun_call(parameter = function()"
+3: "  {"
+4: "    body"
+5: "  })"
+6: "}"
+Actual:
+1: "{"
+2: "  fun_call(parameter = function()"
+3: "           {"
+4: "             body"
+5: "           })"
+6: "}"
+Diffs:
+Line 3: Expected: "  {" | Actual: "           {"
+Line 4: Expected: "    body" | Actual: "             body"
+Line 5: Expected: "  })" | Actual: "           })"
+
+=== logical-operators/2 ===
+Expected:
+1: "(stuff1 &&"
+2: "   stuff2 ||"
+3: "   stuff3)"
+Actual:
+1: "(stuff1 &&"
+2: " stuff2 ||"
+3: " stuff3)"
+Diffs:
+Line 2: Expected: "   stuff2 ||" | Actual: " stuff2 ||"
+Line 3: Expected: "   stuff3)" | Actual: " stuff3)"
+
+=== logical-operators/3 ===
+Expected:
+1: "if (condition1 &&"
+2: "      condition2 ||"
+3: "      (condition3 && condition4) ||"
+4: "      (condition5 &&"
+5: "         condition6 &&"
+6: "         condition7) ||"
+7: "      condition8) {"
+8: "  stuff"
+9: "} && condition8 ||"
+10: "  condition9 ||"
+11: "  condition10"
+Actual:
+1: "if (condition1 &&"
+2: "    condition2 ||"
+3: "    (condition3 && condition4) ||"
+4: "    (condition5 &&"
+5: "     condition6 &&"
+6: "     condition7) ||"
+7: "    condition8) {"
+8: "  stuff"
+9: "} && condition8 ||"
+10: "condition9 ||"
+11: "  condition10"
+Diffs:
+Line 2: Expected: "      condition2 ||" | Actual: "    condition2 ||"
+Line 3: Expected: "      (condition3 && condition4) ||" | Actual: "    (condition3 && condition4) ||"
+Line 4: Expected: "      (condition5 &&" | Actual: "    (condition5 &&"
+Line 5: Expected: "         condition6 &&" | Actual: "     condition6 &&"
+Line 6: Expected: "         condition7) ||" | Actual: "     condition7) ||"
+Line 7: Expected: "      condition8) {" | Actual: "    condition8) {"
+Line 10: Expected: "  condition9 ||" | Actual: "condition9 ||"
+
+=== logical-operators/5 ===
+Expected:
+1: "(stuff1 == stuff2 ||"
+2: "   condition"
+3: ")"
+Actual:
+1: "(stuff1 == stuff2 ||"
+2: " condition"
+3: ")"
+Diffs:
+Line 2: Expected: "   condition" | Actual: " condition"
+
+=== logical-operators/6 ===
+Expected:
+1: "(stuff1 != stuff2 ||"
+2: "   condition"
+3: ")"
+Actual:
+1: "(stuff1 != stuff2 ||"
+2: " condition"
+3: ")"
+Diffs:
+Line 2: Expected: "   condition" | Actual: " condition"
+
+=== logical-operators/8 ===
+Expected:
+1: "if (condition1 || object1 %op% object2 ||"
+2: "      condition3) {"
+3: "  stuff"
+4: "}"
+Actual:
+1: "if (condition1 || object1 %op% object2 ||"
+2: "    condition3) {"
+3: "  stuff"
+4: "}"
+Diffs:
+Line 2: Expected: "      condition3) {" | Actual: "    condition3) {"
+
+=== logical-operators/9 ===
+Expected:
+1: "any(condition1 |"
+2: "      condition2) &&"
+3: "  all(condition3 &"
+4: "        condition4)"
+Actual:
+1: "any(condition1 |"
+2: "    condition2) &&"
+3: "all(condition3 &"
+4: "    condition4)"
+Diffs:
+Line 2: Expected: "      condition2) &&" | Actual: "    condition2) &&"
+Line 3: Expected: "  all(condition3 &" | Actual: "all(condition3 &"
+Line 4: Expected: "        condition4)" | Actual: "    condition4)"

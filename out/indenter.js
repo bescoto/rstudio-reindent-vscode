@@ -270,9 +270,31 @@ function reindentLines(lines, opts) {
                 // Inside a bracket — vertical align or tab-stop
             }
             else if (owner !== null) {
-                desired = (verticalAlign && owner.ch !== '{')
-                    ? ' '.repeat(owner.col + 1)
-                    : owner.lineIndent + tab;
+                if (owner.ch === '(' && owner.blockHanging) {
+                    // `(` whose line ends inside an open block: after the block closes,
+                    // subsequent args sit at the paren's lineIndent (no +tab).
+                    desired = owner.lineIndent;
+                }
+                else if (owner.ch === '(' && owner.hanging && stripped[0] === '{') {
+                    // Lone `{` as a standalone argument inside a hanging `(`: the block
+                    // anchors at the paren's lineIndent, not one tab deeper.
+                    desired = owner.lineIndent;
+                }
+                else if (idx - 1 === owner.lineNo) {
+                    desired = (verticalAlign && owner.ch === '(' && !owner.hanging)
+                        ? ' '.repeat(owner.col + 1)
+                        : owner.lineIndent + tab;
+                }
+                else if (owner.ch === '(') {
+                    desired = (verticalAlign && !owner.hanging)
+                        ? ' '.repeat(owner.col + 1)
+                        : owner.lineIndent + tab;
+                }
+                else {
+                    desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
+                        ? ' '.repeat(owner.col + 1)
+                        : owner.lineIndent + tab;
+                }
                 // Top-level line
             }
             else {
@@ -294,15 +316,34 @@ function reindentLines(lines, opts) {
         // ── Update bracket stack from the REINDENTED line ────────────────────────
         const newIndent = getLineIndent(newLine);
         const newLineCleaned = blankStringsAndComments(newLine);
+        // Tracks the most recent `(` popped on this line: when a `{` is pushed
+        // immediately after, the `{` is the body of that parenthesised construct
+        // (e.g. `function(args) {`) and should anchor its lineIndent to that
+        // construct's line, not to its own column.
+        let lastPoppedParenLineIndent = null;
         for (const tok of tokenizeLine(newLine)) {
             if (tok.kind === 'open') {
-                const hanging = newLineCleaned.slice(tok.col + 1).trim() === '';
-                stack.push({ ch: tok.ch, col: tok.col, lineIndent: newIndent, hanging });
+                const remainder = newLineCleaned.slice(tok.col + 1);
+                const hanging = remainder.trim() === '';
+                const trimmed = remainder.trimEnd();
+                const lastChar = trimmed.length > 0 ? trimmed[trimmed.length - 1] : '';
+                const blockHanging = tok.ch === '(' && !hanging && OPEN_BRACKETS.has(lastChar);
+                // `{` anchors to the enclosing statement:
+                //  - if a `)` was just popped on this line, use that paren's lineIndent
+                //    (`function(args) {` — the `{` is the body of that call);
+                //  - otherwise stay at the current line's indent.
+                let lineIndent = newIndent;
+                if (tok.ch === '{' && lastPoppedParenLineIndent !== null) {
+                    lineIndent = lastPoppedParenLineIndent;
+                }
+                stack.push({ ch: tok.ch, col: tok.col, lineIndent, hanging, blockHanging, lineNo: idx });
             }
             else {
                 const expected = MATCH_CLOSE[tok.ch];
                 if (stack.length > 0 && stack[stack.length - 1].ch === expected) {
-                    stack.pop();
+                    const popped = stack.pop();
+                    if (popped.ch === '(')
+                        lastPoppedParenLineIndent = popped.lineIndent;
                 }
             }
         }

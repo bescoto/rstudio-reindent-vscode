@@ -1,0 +1,6 @@
+{
+  object <- function()
+  {
+    body
+  }
+}

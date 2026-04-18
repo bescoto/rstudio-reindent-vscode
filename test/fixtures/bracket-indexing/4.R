@@ -1,0 +1,12 @@
+{
+  object[
+    fun_call(
+      body
+    ),
+    argument[
+    (
+      sub_argument
+    )
+    ]
+  ]
+}

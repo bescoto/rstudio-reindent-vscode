@@ -1,0 +1,9 @@
+object <- stuff1 +
+  stuff2 + stuff3 +
+  stuff4 ~ stuff5 +
+    stuff6 + stuff7 +
+    stuff8 := stuff9 +
+      stuff10 + stuff11 +
+      stuff12 = stuff13 +
+        stuff14 + stuff15 +
+        stuff16

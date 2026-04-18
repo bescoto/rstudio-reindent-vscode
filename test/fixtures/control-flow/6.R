@@ -1,0 +1,5 @@
+{
+  for (sequence) {
+    stuff
+  }
+}

@@ -1,0 +1,4 @@
+`object` <- function()
+{
+  body
+}

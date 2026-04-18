@@ -1,0 +1,5 @@
+object <-
+  function()
+  {
+    ## comment
+  }

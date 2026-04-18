@@ -1,0 +1,5 @@
+stuff[stuff1 %>%
+        stuff2 %>%
+        stuff3] %>%
+  stuff4 %>%
+  stuff5

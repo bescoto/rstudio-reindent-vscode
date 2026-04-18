@@ -28,6 +28,7 @@ interface BracketFrame {
   col: number;         // column in the REINDENTED line
   lineIndent: string;  // leading whitespace of the line containing this bracket
   hanging: boolean;    // true if opener is the last token on its line → tab-stop mode
+  lineNo: number;      // index of the line containing this bracket
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -294,9 +295,15 @@ export function reindentLines(lines: string[], opts: ReindentOptions): string[] 
 
       // Inside a bracket — vertical align or tab-stop
       } else if (owner !== null) {
-        desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
-          ? ' '.repeat(owner.col + 1)
-          : owner.lineIndent + tab;
+        if (idx - 1 === owner.lineNo) {
+          desired = owner.lineIndent + tab;
+        } else if (owner.ch === '(') {
+          desired = owner.lineIndent;
+        } else {
+          desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
+            ? ' '.repeat(owner.col + 1)
+            : owner.lineIndent + tab;
+        }
 
       // Top-level line
       } else {
@@ -323,7 +330,7 @@ export function reindentLines(lines: string[], opts: ReindentOptions): string[] 
     for (const tok of tokenizeLine(newLine)) {
       if (tok.kind === 'open') {
         const hanging = newLineCleaned.slice(tok.col + 1).trim() === '';
-        stack.push({ ch: tok.ch, col: tok.col, lineIndent: newIndent, hanging });
+        stack.push({ ch: tok.ch, col: tok.col, lineIndent: newIndent, hanging, lineNo: idx });
       } else {
         const expected = MATCH_CLOSE[tok.ch];
         if (stack.length > 0 && stack[stack.length - 1].ch === expected) {

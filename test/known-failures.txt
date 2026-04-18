@@ -14,14 +14,10 @@
 # the entries below to passing.
 
 # blocks
-blocks/12
 blocks/17
 blocks/18
-blocks/19
 blocks/2
-blocks/20
 blocks/21
-blocks/4
 blocks/5
 blocks/6
 blocks/7
@@ -29,15 +25,12 @@ blocks/8
 blocks/9
 
 # bracket-indexing
-bracket-indexing/1
 bracket-indexing/2
-bracket-indexing/3
 bracket-indexing/4
 bracket-indexing/5
 
 # comments
 comments/2
-comments/4
 comments/7
 
 # continuation-lines
@@ -51,9 +44,7 @@ continuation-lines/19
 continuation-lines/2
 continuation-lines/20
 continuation-lines/21
-continuation-lines/23
 continuation-lines/25
-continuation-lines/26
 continuation-lines/27
 continuation-lines/28
 continuation-lines/29
@@ -80,7 +71,6 @@ control-flow/10a
 control-flow/10b
 control-flow/11
 control-flow/12
-control-flow/13
 control-flow/14
 control-flow/15
 control-flow/16
@@ -102,28 +92,19 @@ control-flow/8
 function-calls/1
 function-calls/10
 function-calls/11
-function-calls/12
-function-calls/13
-function-calls/14
-function-calls/15
-function-calls/16
 function-calls/18
 function-calls/19
-function-calls/2
 function-calls/20
 function-calls/3
 function-calls/4
 function-calls/5
 function-calls/6
 function-calls/6b
-function-calls/7
-function-calls/7b
 function-calls/8
 function-calls/9
 
 # function-declarations
 function-declarations/1
-function-declarations/10
 function-declarations/13
 function-declarations/14
 function-declarations/2

@@ -294,7 +294,7 @@ export function reindentLines(lines: string[], opts: ReindentOptions): string[] 
 
       // Inside a bracket — vertical align or tab-stop
       } else if (owner !== null) {
-        desired = (verticalAlign && owner.ch !== '{')
+        desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
           ? ' '.repeat(owner.col + 1)
           : owner.lineIndent + tab;
 

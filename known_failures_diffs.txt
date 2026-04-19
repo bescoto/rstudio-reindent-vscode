@@ -29,13 +29,13 @@ Actual:
 10: "},"
 11: "parameter3 ="
 12: "stuff5 ~"
-13: "stuff6 +"
-14: "stuff7,"
+13: "  stuff6 +"
+14: "  stuff7,"
 15: "argument)"
 Diffs:
 Line 12: Expected: "  stuff5 ~" | Actual: "stuff5 ~"
-Line 13: Expected: "    stuff6 +" | Actual: "stuff6 +"
-Line 14: Expected: "    stuff7," | Actual: "stuff7,"
+Line 13: Expected: "    stuff6 +" | Actual: "  stuff6 +"
+Line 14: Expected: "    stuff7," | Actual: "  stuff7,"
 
 === blocks/21 ===
 Expected:
@@ -131,25 +131,6 @@ Actual:
 Diffs:
 Line 9: Expected: "      argument2)" | Actual: "              argument2)"
 
-=== comments/7 ===
-Expected:
-1: "{"
-2: "  fun_call(lhs +"
-3: "             ### Comment"
-4: "             rhs"
-5: "  )"
-6: "}"
-Actual:
-1: "{"
-2: "  fun_call(lhs +"
-3: "           ### Comment"
-4: "           rhs"
-5: "  )"
-6: "}"
-Diffs:
-Line 3: Expected: "             ### Comment" | Actual: "           ### Comment"
-Line 4: Expected: "             rhs" | Actual: "           rhs"
-
 === continuation-lines/10 ===
 Expected:
 1: "fun_call(argument1 %>%"
@@ -163,72 +144,21 @@ Expected:
 9: ")"
 Actual:
 1: "fun_call(argument1 %>%"
-2: "         stuff1, argument2 %>%"
-3: "         stuff2, {"
-4: "           stuff3 %>%"
-5: "           stuff4"
-6: "         } %>%"
-7: "         stuff5,"
+2: "           stuff1, argument2 %>%"
+3: "           stuff2, {"
+4: "             stuff3 %>%"
+5: "               stuff4"
+6: "           } %>%"
+7: "           stuff5,"
 8: "         argument3"
 9: ")"
 Diffs:
-Line 2: Expected: "           stuff1, argument2 %>%" | Actual: "         stuff1, argument2 %>%"
-Line 3: Expected: "                     stuff2, {" | Actual: "         stuff2, {"
-Line 4: Expected: "                       stuff3 %>%" | Actual: "           stuff3 %>%"
-Line 5: Expected: "                         stuff4" | Actual: "           stuff4"
-Line 6: Expected: "                     } %>%" | Actual: "         } %>%"
-Line 7: Expected: "                       stuff5," | Actual: "         stuff5,"
+Line 3: Expected: "                     stuff2, {" | Actual: "           stuff2, {"
+Line 4: Expected: "                       stuff3 %>%" | Actual: "             stuff3 %>%"
+Line 5: Expected: "                         stuff4" | Actual: "               stuff4"
+Line 6: Expected: "                     } %>%" | Actual: "           } %>%"
+Line 7: Expected: "                       stuff5," | Actual: "           stuff5,"
 Line 8: Expected: "           argument3" | Actual: "         argument3"
-
-=== continuation-lines/13 ===
-Expected:
-1: "{"
-2: "  (stuff) %>%"
-3: "    fun_call()"
-4: ""
-5: "  {stuff} %>%"
-6: "    fun_call()"
-7: "}"
-Actual:
-1: "{"
-2: "  (stuff) %>%"
-3: "  fun_call()"
-4: ""
-5: "  {stuff} %>%"
-6: "  fun_call()"
-7: "}"
-Diffs:
-Line 3: Expected: "    fun_call()" | Actual: "  fun_call()"
-Line 6: Expected: "    fun_call()" | Actual: "  fun_call()"
-
-=== continuation-lines/14 ===
-Expected:
-1: "{"
-2: "  object + ("
-3: "    stuff"
-4: "  ) %>%"
-5: "    fun_call()"
-6: ""
-7: "  object + {"
-8: "    stuff"
-9: "  } %>%"
-10: "    fun_call()"
-11: "}"
-Actual:
-1: "{"
-2: "  object + ("
-3: "    stuff"
-4: "  ) %>%"
-5: "  fun_call()"
-6: ""
-7: "  object + {"
-8: "    stuff"
-9: "  } %>%"
-10: "  fun_call()"
-11: "}"
-Diffs:
-Line 5: Expected: "    fun_call()" | Actual: "  fun_call()"
-Line 10: Expected: "    fun_call()" | Actual: "  fun_call()"
 
 === continuation-lines/15 ===
 Expected:
@@ -302,22 +232,6 @@ Actual:
 Diffs:
 Line 3: Expected: "`object`@`elem` <- stuff1 +" | Actual: "  `object`@`elem` <- stuff1 +"
 
-=== continuation-lines/19 ===
-Expected:
-1: "{"
-2: "  ## comment"
-3: "  object1 <-"
-4: "    object2"
-5: "}"
-Actual:
-1: "{"
-2: "  ## comment"
-3: "  object1 <-"
-4: "  object2"
-5: "}"
-Diffs:
-Line 4: Expected: "    object2" | Actual: "  object2"
-
 === continuation-lines/2 ===
 Expected:
 1: "{"
@@ -330,14 +244,12 @@ Expected:
 Actual:
 1: "{"
 2: "  stuff1 %>%"
-3: "  stuff2 %>%"
-4: "  stuff3"
+3: "    stuff2 %>%"
+4: "    stuff3"
 5: "} %>%"
 6: "stuff4 %>%"
 7: "  stuff5"
 Diffs:
-Line 3: Expected: "    stuff2 %>%" | Actual: "  stuff2 %>%"
-Line 4: Expected: "    stuff3" | Actual: "  stuff3"
 Line 6: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
 
 === continuation-lines/20 ===
@@ -352,21 +264,16 @@ Expected:
 8: "              stuff10})"
 Actual:
 1: "fun_call(stuff1 + stuff2 +"
-2: "         stuff3 +"
-3: "         (stuff4 + stuff5 +"
-4: "          stuff6) +"
-5: "         object[stuff7 +"
-6: "           stuff8] +"
-7: "         {stuff9 +"
-8: "           stuff10})"
+2: "           stuff3 +"
+3: "           (stuff4 + stuff5 +"
+4: "              stuff6) +"
+5: "           object[stuff7 +"
+6: "               stuff8] +"
+7: "           {stuff9 +"
+8: "               stuff10})"
 Diffs:
-Line 2: Expected: "           stuff3 +" | Actual: "         stuff3 +"
-Line 3: Expected: "           (stuff4 + stuff5 +" | Actual: "         (stuff4 + stuff5 +"
-Line 4: Expected: "              stuff6) +" | Actual: "          stuff6) +"
-Line 5: Expected: "           object[stuff7 +" | Actual: "         object[stuff7 +"
-Line 6: Expected: "                    stuff8] +" | Actual: "           stuff8] +"
-Line 7: Expected: "           {stuff9 +" | Actual: "         {stuff9 +"
-Line 8: Expected: "              stuff10})" | Actual: "           stuff10})"
+Line 6: Expected: "                    stuff8] +" | Actual: "               stuff8] +"
+Line 8: Expected: "              stuff10})" | Actual: "               stuff10})"
 
 === continuation-lines/21 ===
 Expected:
@@ -381,20 +288,6 @@ Actual:
 4: "stuff2"
 Diffs:
 Line 4: Expected: "  stuff2" | Actual: "stuff2"
-
-=== continuation-lines/25 ===
-Expected:
-1: "fun_call1(argument, fun_call2("
-2: "  stuff1"
-3: ") +"
-4: "  stuff2)"
-Actual:
-1: "fun_call1(argument, fun_call2("
-2: "  stuff1"
-3: ") +"
-4: "stuff2)"
-Diffs:
-Line 4: Expected: "  stuff2)" | Actual: "stuff2)"
 
 === continuation-lines/27 ===
 Expected:
@@ -417,10 +310,9 @@ Expected:
 3: "  argument2)"
 Actual:
 1: "fun_call(argument1 %>%"
-2: "         stuff,"
+2: "           stuff,"
 3: "         argument2)"
 Diffs:
-Line 2: Expected: "           stuff," | Actual: "         stuff,"
 Line 3: Expected: "  argument2)" | Actual: "         argument2)"
 
 === continuation-lines/29 ===
@@ -430,10 +322,9 @@ Expected:
 3: "  argument)"
 Actual:
 1: "fun_call(stuff1 :="
-2: "         (stuff2),"
+2: "           (stuff2),"
 3: "         argument)"
 Diffs:
-Line 2: Expected: "           (stuff2)," | Actual: "         (stuff2),"
 Line 3: Expected: "  argument)" | Actual: "         argument)"
 
 === continuation-lines/3 ===
@@ -448,14 +339,12 @@ Expected:
 Actual:
 1: "("
 2: "  stuff1 %>%"
-3: "  stuff2 %>%"
-4: "  stuff3"
+3: "    stuff2 %>%"
+4: "    stuff3"
 5: ") %>%"
 6: "stuff4 %>%"
 7: "  stuff5"
 Diffs:
-Line 3: Expected: "    stuff2 %>%" | Actual: "  stuff2 %>%"
-Line 4: Expected: "    stuff3" | Actual: "  stuff3"
 Line 6: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
 
 === continuation-lines/30 ===
@@ -466,9 +355,9 @@ Expected:
 Actual:
 1: "fun_call1(fun_call2("
 2: "  fun_call3()) %>%"
-3: "stuff)"
+3: "  stuff)"
 Diffs:
-Line 3: Expected: "    stuff)" | Actual: "stuff)"
+Line 3: Expected: "    stuff)" | Actual: "  stuff)"
 
 === continuation-lines/31 ===
 Expected:
@@ -478,12 +367,11 @@ Expected:
 4: "           argument)"
 Actual:
 1: "fun_call(object1 + object2 ~ object3 +"
-2: "         object4 + object5 := object6 +"
-3: "         object7,"
+2: "           object4 + object5 := object6 +"
+3: "           object7,"
 4: "         argument)"
 Diffs:
-Line 2: Expected: "           object4 + object5 := object6 +" | Actual: "         object4 + object5 := object6 +"
-Line 3: Expected: "             object7," | Actual: "         object7,"
+Line 3: Expected: "             object7," | Actual: "           object7,"
 Line 4: Expected: "           argument)" | Actual: "         argument)"
 
 === continuation-lines/32 ===
@@ -506,85 +394,6 @@ Actual:
 Diffs:
 Line 2: Expected: "           )" | Actual: ")"
 
-=== continuation-lines/34 ===
-Expected:
-1: "fun_call(object[index1]$element[index2][index3]@attribute +"
-2: "           stuff)"
-Actual:
-1: "fun_call(object[index1]$element[index2][index3]@attribute +"
-2: "         stuff)"
-Diffs:
-Line 2: Expected: "           stuff)" | Actual: "         stuff)"
-
-=== continuation-lines/35a ===
-Expected:
-1: "fun_call(argument <-"
-2: "           object)"
-Actual:
-1: "fun_call(argument <-"
-2: "         object)"
-Diffs:
-Line 2: Expected: "           object)" | Actual: "         object)"
-
-=== continuation-lines/35b ===
-Expected:
-1: "fun_call(argument <<-"
-2: "           object)"
-Actual:
-1: "fun_call(argument <<-"
-2: "         object)"
-Diffs:
-Line 2: Expected: "           object)" | Actual: "         object)"
-
-=== continuation-lines/36 ===
-Expected:
-1: "funcall(!stuff1 ||"
-2: "          stuff2)"
-Actual:
-1: "funcall(!stuff1 ||"
-2: "        stuff2)"
-Diffs:
-Line 2: Expected: "          stuff2)" | Actual: "        stuff2)"
-
-=== continuation-lines/37 ===
-Expected:
-1: "fun_call({"
-2: ""
-3: "  stuff <-"
-4: "    namespace:::fun_call() %>%"
-5: "    fun_call()"
-6: ""
-7: "  stuff"
-8: "})"
-9: ""
-10: "fun_call({"
-11: "  stuff <-"
-12: "    namespace::fun_call() %>%"
-13: "    fun_call()"
-14: "  stuff"
-15: "})"
-Actual:
-1: "fun_call({"
-2: ""
-3: "  stuff <-"
-4: "  namespace:::fun_call() %>%"
-5: "  fun_call()"
-6: ""
-7: "  stuff"
-8: "})"
-9: ""
-10: "fun_call({"
-11: "  stuff <-"
-12: "  namespace::fun_call() %>%"
-13: "  fun_call()"
-14: "  stuff"
-15: "})"
-Diffs:
-Line 4: Expected: "    namespace:::fun_call() %>%" | Actual: "  namespace:::fun_call() %>%"
-Line 5: Expected: "    fun_call()" | Actual: "  fun_call()"
-Line 12: Expected: "    namespace::fun_call() %>%" | Actual: "  namespace::fun_call() %>%"
-Line 13: Expected: "    fun_call()" | Actual: "  fun_call()"
-
 === continuation-lines/4 ===
 Expected:
 1: "object["
@@ -597,14 +406,12 @@ Expected:
 Actual:
 1: "object["
 2: "  stuff1 %>%"
-3: "  stuff2 %>%"
-4: "  stuff3"
+3: "    stuff2 %>%"
+4: "    stuff3"
 5: "] %>%"
 6: "stuff4 %>%"
 7: "  stuff5"
 Diffs:
-Line 3: Expected: "    stuff2 %>%" | Actual: "  stuff2 %>%"
-Line 4: Expected: "    stuff3" | Actual: "  stuff3"
 Line 6: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
 
 === continuation-lines/40 ===
@@ -617,41 +424,6 @@ Actual:
 Diffs:
 Line 2: Expected: "       2" | Actual: "  2"
 
-=== continuation-lines/5 ===
-Expected:
-1: "stuff1 %>%"
-2: "  stuff2 %>%"
-3: "  if (condition) {"
-4: "    stuff3 %>%"
-5: "      stuff4 %>%"
-6: "      stuff5"
-7: "  } else {"
-8: "    stuff6 %>%"
-9: "      stuff7 %>%"
-10: "      stuff8"
-11: "  } %>%"
-12: "  stuff9 %>%"
-13: "  stuff10"
-Actual:
-1: "stuff1 %>%"
-2: "  stuff2 %>%"
-3: "  if (condition) {"
-4: "    stuff3 %>%"
-5: "    stuff4 %>%"
-6: "    stuff5"
-7: "  } else {"
-8: "    stuff6 %>%"
-9: "    stuff7 %>%"
-10: "    stuff8"
-11: "  } %>%"
-12: "  stuff9 %>%"
-13: "  stuff10"
-Diffs:
-Line 5: Expected: "      stuff4 %>%" | Actual: "    stuff4 %>%"
-Line 6: Expected: "      stuff5" | Actual: "    stuff5"
-Line 9: Expected: "      stuff7 %>%" | Actual: "    stuff7 %>%"
-Line 10: Expected: "      stuff8" | Actual: "    stuff8"
-
 === continuation-lines/6 ===
 Expected:
 1: "stuff[stuff1 %>%"
@@ -661,30 +433,13 @@ Expected:
 5: "  stuff5"
 Actual:
 1: "stuff[stuff1 %>%"
-2: "  stuff2 %>%"
-3: "      stuff3] %>%"
+2: "    stuff2 %>%"
+3: "        stuff3] %>%"
 4: "stuff4 %>%"
 5: "  stuff5"
 Diffs:
-Line 2: Expected: "        stuff2 %>%" | Actual: "  stuff2 %>%"
-Line 3: Expected: "        stuff3] %>%" | Actual: "      stuff3] %>%"
+Line 2: Expected: "        stuff2 %>%" | Actual: "    stuff2 %>%"
 Line 4: Expected: "  stuff4 %>%" | Actual: "stuff4 %>%"
-
-=== continuation-lines/7 ===
-Expected:
-1: "ggplot() +"
-2: "  geom(lhs -"
-3: "         rhs"
-4: "  ) +"
-5: "  geom()"
-Actual:
-1: "ggplot() +"
-2: "  geom(lhs -"
-3: "       rhs"
-4: "  ) +"
-5: "  geom()"
-Diffs:
-Line 3: Expected: "         rhs" | Actual: "       rhs"
 
 === continuation-lines/8 ===
 Expected:
@@ -701,21 +456,19 @@ Expected:
 Actual:
 1: "{"
 2: "  ggplot() +"
-3: "  geom1(argument1,"
-4: "        argument2 = ("
-5: "          stuff1"
-6: "        ) -"
-7: "        stuff2) +"
-8: "  geom2() +"
-9: "  geom3()"
+3: "    geom1(argument1,"
+4: "          argument2 = ("
+5: "            stuff1"
+6: "          ) -"
+7: "            stuff2) +"
+8: "    geom2() +"
+9: "    geom3()"
 10: "}"
 Diffs:
-Line 3: Expected: "    geom1(argument1," | Actual: "  geom1(argument1,"
-Line 4: Expected: "      argument2 = (" | Actual: "        argument2 = ("
-Line 5: Expected: "        stuff1" | Actual: "          stuff1"
-Line 6: Expected: "      ) -" | Actual: "        ) -"
-Line 8: Expected: "    geom2() +" | Actual: "  geom2() +"
-Line 9: Expected: "    geom3()" | Actual: "  geom3()"
+Line 4: Expected: "      argument2 = (" | Actual: "          argument2 = ("
+Line 5: Expected: "        stuff1" | Actual: "            stuff1"
+Line 6: Expected: "      ) -" | Actual: "          ) -"
+Line 7: Expected: "        stuff2) +" | Actual: "            stuff2) +"
 
 === continuation-lines/9 ===
 Expected:
@@ -735,63 +488,21 @@ Actual:
 1: "stuff +"
 2: "  fun_call(parameter = argument1,"
 3: "           fun_call((stuff1 - stuff2 +"
-4: "                     stuff3"
+4: "                       stuff3"
 5: "           ) /"
-6: "                    stuff4)"
+6: "                      stuff4)"
 7: "  ) /"
 8: "  stuff5"
 9: ""
 10: "fun_call(arg1 +"
-11: "         arg2, arg3 +"
-12: "         arg4)"
+11: "           arg2, arg3 +"
+12: "           arg4)"
 Diffs:
 Line 3: Expected: "    fun_call((stuff1 - stuff2 +" | Actual: "           fun_call((stuff1 - stuff2 +"
-Line 4: Expected: "                stuff3" | Actual: "                     stuff3"
+Line 4: Expected: "                stuff3" | Actual: "                       stuff3"
 Line 5: Expected: "    ) /" | Actual: "           ) /"
-Line 6: Expected: "      stuff4)" | Actual: "                    stuff4)"
-Line 11: Expected: "           arg2, arg3 +" | Actual: "         arg2, arg3 +"
-Line 12: Expected: "                   arg4)" | Actual: "         arg4)"
-
-=== control-flow/10a ===
-Expected:
-1: "{"
-2: "  object <-"
-3: "    if (condition) stuff1"
-4: "  else stuff2"
-5: "}"
-Actual:
-1: "{"
-2: "  object <-"
-3: "  if (condition) stuff1"
-4: "  else stuff2"
-5: "}"
-Diffs:
-Line 3: Expected: "    if (condition) stuff1" | Actual: "  if (condition) stuff1"
-
-=== control-flow/10b ===
-Expected:
-1: "{"
-2: "  object <-"
-3: "    if (condition) fun_call("
-4: "      argument1,"
-5: "      argument2"
-6: "    )"
-7: "  else stuff"
-8: "}"
-Actual:
-1: "{"
-2: "  object <-"
-3: "  if (condition) fun_call("
-4: "    argument1,"
-5: "    argument2"
-6: "  )"
-7: "  else stuff"
-8: "}"
-Diffs:
-Line 3: Expected: "    if (condition) fun_call(" | Actual: "  if (condition) fun_call("
-Line 4: Expected: "      argument1," | Actual: "    argument1,"
-Line 5: Expected: "      argument2" | Actual: "    argument2"
-Line 6: Expected: "    )" | Actual: "  )"
+Line 6: Expected: "      stuff4)" | Actual: "                      stuff4)"
+Line 12: Expected: "                   arg4)" | Actual: "           arg4)"
 
 === control-flow/11 ===
 Expected:
@@ -1315,10 +1026,9 @@ Expected:
 3: "  argument2)"
 Actual:
 1: "fun_call(argument1 %>%"
-2: "         stuff,"
+2: "           stuff,"
 3: "         argument2)"
 Diffs:
-Line 2: Expected: "           stuff," | Actual: "         stuff,"
 Line 3: Expected: "  argument2)" | Actual: "         argument2)"
 
 === function-calls/19 ===
@@ -1448,12 +1158,11 @@ Expected:
 5: "           })"
 Actual:
 1: "fun_call(object :="
-2: "         function()"
+2: "           function()"
 3: "         {"
 4: "           body"
 5: "         })"
 Diffs:
-Line 2: Expected: "           function()" | Actual: "         function()"
 Line 3: Expected: "           {" | Actual: "         {"
 Line 4: Expected: "             body" | Actual: "           body"
 Line 5: Expected: "           })" | Actual: "         })"
@@ -1575,19 +1284,6 @@ Line 3: Expected: "  {" | Actual: "           {"
 Line 4: Expected: "    body" | Actual: "             body"
 Line 5: Expected: "  })" | Actual: "           })"
 
-=== logical-operators/2 ===
-Expected:
-1: "(stuff1 &&"
-2: "   stuff2 ||"
-3: "   stuff3)"
-Actual:
-1: "(stuff1 &&"
-2: " stuff2 ||"
-3: " stuff3)"
-Diffs:
-Line 2: Expected: "   stuff2 ||" | Actual: " stuff2 ||"
-Line 3: Expected: "   stuff3)" | Actual: " stuff3)"
-
 === logical-operators/3 ===
 Expected:
 1: "if (condition1 &&"
@@ -1603,62 +1299,18 @@ Expected:
 11: "  condition10"
 Actual:
 1: "if (condition1 &&"
-2: "    condition2 ||"
-3: "    (condition3 && condition4) ||"
-4: "    (condition5 &&"
-5: "     condition6 &&"
-6: "     condition7) ||"
-7: "    condition8) {"
+2: "      condition2 ||"
+3: "      (condition3 && condition4) ||"
+4: "      (condition5 &&"
+5: "         condition6 &&"
+6: "         condition7) ||"
+7: "      condition8) {"
 8: "  stuff"
 9: "} && condition8 ||"
 10: "condition9 ||"
 11: "  condition10"
 Diffs:
-Line 2: Expected: "      condition2 ||" | Actual: "    condition2 ||"
-Line 3: Expected: "      (condition3 && condition4) ||" | Actual: "    (condition3 && condition4) ||"
-Line 4: Expected: "      (condition5 &&" | Actual: "    (condition5 &&"
-Line 5: Expected: "         condition6 &&" | Actual: "     condition6 &&"
-Line 6: Expected: "         condition7) ||" | Actual: "     condition7) ||"
-Line 7: Expected: "      condition8) {" | Actual: "    condition8) {"
 Line 10: Expected: "  condition9 ||" | Actual: "condition9 ||"
-
-=== logical-operators/5 ===
-Expected:
-1: "(stuff1 == stuff2 ||"
-2: "   condition"
-3: ")"
-Actual:
-1: "(stuff1 == stuff2 ||"
-2: " condition"
-3: ")"
-Diffs:
-Line 2: Expected: "   condition" | Actual: " condition"
-
-=== logical-operators/6 ===
-Expected:
-1: "(stuff1 != stuff2 ||"
-2: "   condition"
-3: ")"
-Actual:
-1: "(stuff1 != stuff2 ||"
-2: " condition"
-3: ")"
-Diffs:
-Line 2: Expected: "   condition" | Actual: " condition"
-
-=== logical-operators/8 ===
-Expected:
-1: "if (condition1 || object1 %op% object2 ||"
-2: "      condition3) {"
-3: "  stuff"
-4: "}"
-Actual:
-1: "if (condition1 || object1 %op% object2 ||"
-2: "    condition3) {"
-3: "  stuff"
-4: "}"
-Diffs:
-Line 2: Expected: "      condition3) {" | Actual: "    condition3) {"
 
 === logical-operators/9 ===
 Expected:
@@ -1668,13 +1320,12 @@ Expected:
 4: "        condition4)"
 Actual:
 1: "any(condition1 |"
-2: "    condition2) &&"
+2: "      condition2) &&"
 3: "all(condition3 &"
-4: "    condition4)"
+4: "      condition4)"
 Diffs:
-Line 2: Expected: "      condition2) &&" | Actual: "    condition2) &&"
 Line 3: Expected: "  all(condition3 &" | Actual: "all(condition3 &"
-Line 4: Expected: "        condition4)" | Actual: "    condition4)"
+Line 4: Expected: "        condition4)" | Actual: "      condition4)"
 
 === specific-situations-and-overrides/10 ===
 Expected:

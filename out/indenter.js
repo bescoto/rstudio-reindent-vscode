@@ -19,12 +19,23 @@ const CLOSE_BRACKETS = new Set([')', ']', '}']);
 const MATCH_CLOSE = { ')': '(', ']': '[', '}': '{' };
 const MATCH_OPEN = { '(': ')', '[': ']', '{': '}' };
 // Top-level continuation operators — longest first for greedy matching.
-// Note: bare '=' intentionally excluded (named args handled by bracket context).
+// '=' is included so lines ending with e.g. `x =` chain onto the next line.
+// Named-arg '=' lives inside brackets, so it never reaches the top-level
+// continuation path.
 const CONTINUATION_OPS = [
     '&&', '||', '|>', '%>%', ':=', '<-', '->',
     '==', '!=', '<=', '>=',
-    '+', '-', '*', '/', '&', '|', '~',
+    '+', '-', '*', '/', '&', '|', '~', '=',
 ];
+// "Major" continuation operators. Each distinct major op appearing in a
+// top-level chain opens one extra level of indent for subsequent lines —
+// so e.g. `a <- b ~ c := d` nests three levels deep. Operators not in this
+// set (+, -, *, /, &&, ||, ...) continue at the current chain level.
+// Repetitions of the same op don't stack (a pipe chain `a %>% b %>% c`
+// is flat), which is why we count DISTINCT majors rather than occurrences.
+// The lookbehind/lookahead around '=' keeps it from matching inside
+// ==, !=, <=, >=.
+const MAJOR_OPS_RE = /<<-|->>|<-|->|:=|%>%|\|>|~|(?<![<>=!])=(?!=)/g;
 // } else { and } else if (...) {
 const ELSE_RE = /^\s*\}\s*else(\s+if\s*\(.*\))?\s*\{?\s*$/;
 // %op% operators like %in%, %between%
@@ -197,6 +208,49 @@ function prevTopLevel(result, before, topLevelStarts) {
     return -1;
 }
 /**
+ * Collect the set of distinct MAJOR_OPS that appear in the chain ending at
+ * `prev`. Walks back the same way chainRootIndent does so a chain that
+ * closes a multi-line bracketed opener (e.g. `geom_point(...)` across a
+ * ggplot chain) still counts the root's majors.
+ */
+function majorOpsInLine(line) {
+    const cleaned = blankStringsAndComments(line);
+    const found = new Set();
+    MAJOR_OPS_RE.lastIndex = 0;
+    let m;
+    while ((m = MAJOR_OPS_RE.exec(cleaned)) !== null)
+        found.add(m[0]);
+    return found;
+}
+function majorOpsInChain(result, prev, topLevelStarts, topLevelContinuations) {
+    const found = new Set();
+    let p = prev;
+    while (p >= 0) {
+        for (const op of majorOpsInLine(result[p]))
+            found.add(op);
+        const candidate = prevTopLevel(result, p, topLevelStarts);
+        if (candidate < 0)
+            break;
+        const pIndent = getLineIndent(result[p]).length;
+        const candIndent = getLineIndent(result[candidate]).length;
+        if (topLevelContinuations.has(candidate)) {
+            p = candidate;
+        }
+        else if (candIndent >= pIndent) {
+            // Chain-interior line (non-continuation at same-or-greater indent).
+            p = candidate;
+        }
+        else {
+            // Strictly less indent — candidate IS the chain root. Include its
+            // majors and continue to add earlier roots if any.
+            for (const op of majorOpsInLine(result[candidate]))
+                found.add(op);
+            p = candidate;
+        }
+    }
+    return found;
+}
+/**
  * Walk back through consecutive top-level continuations to find the root
  * of the chain (the line not itself preceded by a continuation).
  * Returns the indent of that root line.
@@ -317,8 +371,12 @@ function reindentLines(lines, opts, ctx) {
                     desired = '';
                 }
                 else if (topLevelContinuations.has(prev)) {
-                    // Part of a pipe/ggplot chain — all steps share root_indent + tab
-                    desired = chainRootIndent(result, prev, topLevelStarts, topLevelContinuations) + tab;
+                    // Part of a top-level chain. Start at one tab; each distinct
+                    // MAJOR op seen in the chain before this line adds another tab.
+                    const root = chainRootIndent(result, prev, topLevelStarts, topLevelContinuations);
+                    const majors = majorOpsInChain(result, prev, topLevelStarts, topLevelContinuations);
+                    const levels = Math.max(1, majors.size);
+                    desired = root + tab.repeat(levels);
                 }
                 else {
                     desired = getLineIndent(result[prev]);

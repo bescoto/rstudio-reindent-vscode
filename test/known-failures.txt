@@ -25,8 +25,8 @@ bracket-indexing/5
 
 # continuation-lines
 continuation-lines/10
-continuation-lines/15
-continuation-lines/16
+continuation-lines/11
+continuation-lines/12
 continuation-lines/18
 continuation-lines/2
 continuation-lines/20
@@ -84,7 +84,6 @@ function-declarations/2
 function-declarations/3
 function-declarations/4
 function-declarations/5
-function-declarations/6c
 function-declarations/8
 
 # logical-operators
@@ -93,3 +92,4 @@ logical-operators/9
 
 # specific-situations-and-overrides
 specific-situations-and-overrides/10
+specific-situations-and-overrides/11

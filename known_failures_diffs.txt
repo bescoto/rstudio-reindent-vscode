@@ -37,6 +37,26 @@ Line 12: Expected: "  stuff5 ~" | Actual: "stuff5 ~"
 Line 13: Expected: "    stuff6 +" | Actual: "stuff6 +"
 Line 14: Expected: "    stuff7," | Actual: "stuff7,"
 
+=== blocks/21 ===
+Expected:
+1: "fun_call(argument,"
+2: "  function() {"
+3: ""
+4: "    stuff"
+5: "  }"
+6: "}"
+Actual:
+1: "fun_call(argument,"
+2: "         function() {"
+3: ""
+4: "           stuff"
+5: "         }"
+6: "}"
+Diffs:
+Line 2: Expected: "  function() {" | Actual: "         function() {"
+Line 4: Expected: "    stuff" | Actual: "           stuff"
+Line 5: Expected: "  }" | Actual: "         }"
+
 === bracket-indexing/4 ===
 Expected:
 1: "{"
@@ -861,6 +881,36 @@ Line 5: Expected: "      stuff1" | Actual: "  stuff1"
 Line 7: Expected: "    stuff3" | Actual: "  stuff3"
 Line 9: Expected: "    stuff2" | Actual: "  stuff2"
 
+=== control-flow/15 ===
+Expected:
+1: "object <- fun_call(argument,"
+2: "  parameter = if (condition1) {"
+3: "    stuff1"
+4: "  } else if (condition2) {"
+5: "    stuff3"
+6: "  } else {"
+7: "    stuff2"
+8: "  }"
+9: ")"
+Actual:
+1: "object <- fun_call(argument,"
+2: "                   parameter = if (condition1) {"
+3: "                     stuff1"
+4: "                   } else if (condition2) {"
+5: "                     stuff3"
+6: "                   } else {"
+7: "                     stuff2"
+8: "                   }"
+9: ")"
+Diffs:
+Line 2: Expected: "  parameter = if (condition1) {" | Actual: "                   parameter = if (condition1) {"
+Line 3: Expected: "    stuff1" | Actual: "                     stuff1"
+Line 4: Expected: "  } else if (condition2) {" | Actual: "                   } else if (condition2) {"
+Line 5: Expected: "    stuff3" | Actual: "                     stuff3"
+Line 6: Expected: "  } else {" | Actual: "                   } else {"
+Line 7: Expected: "    stuff2" | Actual: "                     stuff2"
+Line 8: Expected: "  }" | Actual: "                   }"
+
 === control-flow/16 ===
 Expected:
 1: "object <- fun_call(argument, if (condition)"
@@ -945,6 +995,27 @@ Actual:
 Diffs:
 Line 3: Expected: "    stuff1" | Actual: "  stuff1"
 Line 5: Expected: "    stuff2" | Actual: "  stuff2"
+
+=== control-flow/21 ===
+Expected:
+1: "fun_call(argument,"
+2: "  function() {"
+3: ""
+4: "    if (cond) object1 <- object2"
+5: "    else object3 <- object4"
+6: "  })"
+Actual:
+1: "fun_call(argument,"
+2: "         function() {"
+3: ""
+4: "           if (cond) object1 <- object2"
+5: "           else object3 <- object4"
+6: "         })"
+Diffs:
+Line 2: Expected: "  function() {" | Actual: "         function() {"
+Line 4: Expected: "    if (cond) object1 <- object2" | Actual: "           if (cond) object1 <- object2"
+Line 5: Expected: "    else object3 <- object4" | Actual: "           else object3 <- object4"
+Line 6: Expected: "  })" | Actual: "         })"
 
 === control-flow/22 ===
 Expected:
@@ -1171,6 +1242,16 @@ Actual:
 Diffs:
 Line 2: Expected: "  stuff" | Actual: "stuff"
 
+=== function-calls/1 ===
+Expected:
+1: "fun_call(argument1,"
+2: "  argument2)"
+Actual:
+1: "fun_call(argument1,"
+2: "         argument2)"
+Diffs:
+Line 2: Expected: "  argument2)" | Actual: "         argument2)"
+
 === function-calls/11 ===
 Expected:
 1: "{"
@@ -1249,6 +1330,54 @@ Actual:
 2: ")"
 Diffs:
 Line 2: Expected: "  )" | Actual: ")"
+
+=== function-calls/20 ===
+Expected:
+1: "fun_call(parameter1 = ,"
+2: "  parameter2 = argument)"
+Actual:
+1: "fun_call(parameter1 = ,"
+2: "         parameter2 = argument)"
+Diffs:
+Line 2: Expected: "  parameter2 = argument)" | Actual: "         parameter2 = argument)"
+
+=== function-calls/5 ===
+Expected:
+1: "fun_call(parameter = fun_argument(argument1,"
+2: "  argument2"
+3: ")"
+4: ","
+5: "argument3)"
+Actual:
+1: "fun_call(parameter = fun_argument(argument1,"
+2: "                                  argument2"
+3: ")"
+4: "         ,"
+5: "         argument3)"
+Diffs:
+Line 2: Expected: "  argument2" | Actual: "                                  argument2"
+Line 4: Expected: "," | Actual: "         ,"
+Line 5: Expected: "argument3)" | Actual: "         argument3)"
+
+=== function-calls/6 ===
+Expected:
+1: "`fun_call`(argument1,"
+2: "  argument2)"
+Actual:
+1: "`fun_call`(argument1,"
+2: "           argument2)"
+Diffs:
+Line 2: Expected: "  argument2)" | Actual: "           argument2)"
+
+=== function-calls/6b ===
+Expected:
+1: "`:=`(argument1,"
+2: "  argument2)"
+Actual:
+1: "`:=`(argument1,"
+2: "     argument2)"
+Diffs:
+Line 2: Expected: "  argument2)" | Actual: "     argument2)"
 
 === function-calls/8 ===
 Expected:
@@ -1546,3 +1675,20 @@ Diffs:
 Line 2: Expected: "      condition2) &&" | Actual: "    condition2) &&"
 Line 3: Expected: "  all(condition3 &" | Actual: "all(condition3 &"
 Line 4: Expected: "        condition4)" | Actual: "    condition4)"
+
+=== specific-situations-and-overrides/10 ===
+Expected:
+1: "fun_call("
+2: "  ifelse(condition1, argument1,"
+3: "    ifelse(condition2, argument2,"
+4: "      ifelse))"
+5: ")"
+Actual:
+1: "fun_call("
+2: "  ifelse(condition1, argument1,"
+3: "         ifelse(condition2, argument2,"
+4: "                ifelse))"
+5: ")"
+Diffs:
+Line 3: Expected: "    ifelse(condition2, argument2," | Actual: "         ifelse(condition2, argument2,"
+Line 4: Expected: "      ifelse))" | Actual: "                ifelse))"

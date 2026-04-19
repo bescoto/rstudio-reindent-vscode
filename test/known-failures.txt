@@ -22,30 +22,28 @@ bracket-indexing/4
 bracket-indexing/5
 
 # comments
+comments/5
 
 # continuation-lines
+continuation-lines/6
+continuation-lines/8
+continuation-lines/9
 continuation-lines/10
-continuation-lines/11
-continuation-lines/12
+continuation-lines/15
+continuation-lines/16
 continuation-lines/18
-continuation-lines/2
 continuation-lines/20
-continuation-lines/21
-continuation-lines/27
 continuation-lines/28
 continuation-lines/29
-continuation-lines/3
 continuation-lines/30
 continuation-lines/31
 continuation-lines/32
 continuation-lines/33
-continuation-lines/4
 continuation-lines/40
-continuation-lines/6
-continuation-lines/8
-continuation-lines/9
 
 # control-flow
+control-flow/7
+control-flow/8
 control-flow/11
 control-flow/12
 control-flow/14
@@ -62,34 +60,29 @@ control-flow/24
 control-flow/26
 control-flow/28
 control-flow/29
-control-flow/7
-control-flow/8
 
 # function-calls
 function-calls/1
-function-calls/11
-function-calls/18
-function-calls/19
-function-calls/20
 function-calls/5
 function-calls/6
 function-calls/6b
 function-calls/8
 function-calls/9
+function-calls/11
+function-calls/18
+function-calls/19
+function-calls/20
 
 # function-declarations
-function-declarations/13
-function-declarations/14
 function-declarations/2
 function-declarations/3
 function-declarations/4
 function-declarations/5
 function-declarations/8
+function-declarations/13
+function-declarations/14
 
 # logical-operators
-logical-operators/3
-logical-operators/9
 
 # specific-situations-and-overrides
 specific-situations-and-overrides/10
-specific-situations-and-overrides/11

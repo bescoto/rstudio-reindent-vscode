@@ -340,7 +340,6 @@ export function reindentLines(
   const result = [...lines];
   const stack: BracketFrame[] = [];
   const topLevelStarts      = new Set<number>();
-  const topLevelContinuations = new Set<number>();
   // Last real-line index at each EOL stack depth. Used inside brackets to add
   // an extra tab when the previous line in the same scope ended with a
   // continuation operator. Blank lines clear it (hard boundary); comments
@@ -413,15 +412,13 @@ export function reindentLines(
 
         if (prev < 0) {
           desired = '';
-        } else if (topLevelContinuations.has(prev)) {
-          // Part of a top-level chain. Start at one tab; each distinct
-          // MAJOR op seen in the chain before this line adds another tab.
-          const root = chainRootIndent(result, prev, topLevelStarts, topLevelContinuations);
-          const majors = majorOpsInChain(result, prev, topLevelStarts, topLevelContinuations);
-          const levels = Math.max(1, majors.size);
-          desired = root + tab.repeat(levels);
         } else {
-          desired = getLineIndent(result[prev]);
+          const immediatePrev = result[idx - 1];
+          if (lastTokenIsContinuation(immediatePrev)) {
+            desired = tab;
+          } else {
+            desired = getLineIndent(result[prev]);
+          }
         }
       }
 
@@ -463,13 +460,6 @@ export function reindentLines(
           if (popped.ch === '(') lastPoppedParenLineIndent = popped.lineIndent;
         }
       }
-    }
-
-    // Record top-level continuation after stack update (needs EOL stack state).
-    // A line that closes out to top level (e.g. `} %>%`) counts too, even if
-    // it started inside a bracket.
-    if (stack.length === 0 && lastTokenIsContinuation(newLine)) {
-      topLevelContinuations.add(idx);
     }
 
     // Update per-depth tracker. Blank line = hard boundary; comment = transparent.

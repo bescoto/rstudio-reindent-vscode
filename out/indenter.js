@@ -246,6 +246,11 @@ function reindentLines(lines, opts, ctx) {
     const stack = [];
     const topLevelStarts = new Set();
     const topLevelContinuations = new Set();
+    // Last real-line index at each EOL stack depth. Used inside brackets to add
+    // an extra tab when the previous line in the same scope ended with a
+    // continuation operator. Blank lines clear it (hard boundary); comments
+    // pass through unchanged (transparent).
+    const prevIdxAtDepth = new Map();
     for (let idx = 0; idx < lines.length; idx++) {
         const line = lines[idx];
         const stripped = line.trimStart();
@@ -297,6 +302,12 @@ function reindentLines(lines, opts, ctx) {
                     desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
                         ? ' '.repeat(owner.col + 1)
                         : owner.lineIndent + tab;
+                }
+                // Extra tab when the previous non-blank line at this depth ended
+                // with a continuation operator.
+                const prevSameDepth = prevIdxAtDepth.get(stack.length);
+                if (prevSameDepth !== undefined && lastTokenIsContinuation(result[prevSameDepth])) {
+                    desired += tab;
                 }
                 // Top-level line
             }
@@ -350,9 +361,18 @@ function reindentLines(lines, opts, ctx) {
                 }
             }
         }
-        // Record top-level continuation after stack update (needs EOL stack state)
-        if (stack.length === 0 && topLevelStarts.has(idx) && lastTokenIsContinuation(newLine)) {
+        // Record top-level continuation after stack update (needs EOL stack state).
+        // A line that closes out to top level (e.g. `} %>%`) counts too, even if
+        // it started inside a bracket.
+        if (stack.length === 0 && lastTokenIsContinuation(newLine)) {
             topLevelContinuations.add(idx);
+        }
+        // Update per-depth tracker. Blank line = hard boundary; comment = transparent.
+        if (stripped === '') {
+            prevIdxAtDepth.clear();
+        }
+        else if (!stripped.startsWith('#')) {
+            prevIdxAtDepth.set(stack.length, idx);
         }
     }
     return result;

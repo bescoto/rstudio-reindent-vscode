@@ -22,16 +22,12 @@ bracket-indexing/4
 bracket-indexing/5
 
 # comments
-comments/5
 
 # continuation-lines
 continuation-lines/6
 continuation-lines/8
 continuation-lines/9
 continuation-lines/10
-continuation-lines/15
-continuation-lines/16
-continuation-lines/18
 continuation-lines/20
 continuation-lines/28
 continuation-lines/29
@@ -83,6 +79,7 @@ function-declarations/13
 function-declarations/14
 
 # logical-operators
+logical-operators/9
 
 # specific-situations-and-overrides
 specific-situations-and-overrides/10

@@ -72,6 +72,11 @@ const CONTINUATION_OPS = [
 // ==, !=, <=, >=.
 const MAJOR_OPS_RE = /<<-|->>|<-|->|:=|%>%|\|>|~|(?<![<>=!])=(?!=)/g;
 
+// Nesting-major operators: majors that open an additional indent level when
+// they appear in a top-level chain. Pipe operators (%>%, |>) are excluded —
+// pipe chains stay flat, so `a %>% b` does not nest under a preceding `<-`.
+const NESTING_MAJOR_OPS_RE = /<<-|->>|<-|->|:=|~|(?<![<>=!])=(?!=)/g;
+
 // } else { and } else if (...) {
 const ELSE_RE = /^\s*\}\s*else(\s+if\s*\(.*\))?\s*\{?\s*$/;
 
@@ -255,6 +260,15 @@ function majorOpsInLine(line: string): Set<string> {
   return found;
 }
 
+function nestingMajorsInLine(line: string): Set<string> {
+  const cleaned = blankStringsAndComments(line);
+  const found = new Set<string>();
+  NESTING_MAJOR_OPS_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = NESTING_MAJOR_OPS_RE.exec(cleaned)) !== null) found.add(m[0]);
+  return found;
+}
+
 function majorOpsInChain(
   result: string[],
   prev: number,
@@ -345,6 +359,11 @@ export function reindentLines(
   // continuation operator. Blank lines clear it (hard boundary); comments
   // pass through unchanged (transparent).
   const prevIdxAtDepth = new Map<number, number>();
+  // Index of the root line of an active top-level chain, or -1. A chain opens
+  // on the first line that ends at top-level with a continuation op; it stays
+  // open across bracketed blocks (e.g. `} %>%`) and closes when a top-level
+  // line ends without continuation or a blank line intervenes.
+  let chainRootIdx = -1;
 
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx];
@@ -408,17 +427,32 @@ export function reindentLines(
 
       // Top-level line
       } else {
-        const prev = prevTopLevel(result, idx, topLevelStarts);
+        // Walk back to the nearest real line (skip comments, stop at blank).
+        let prevReal = idx - 1;
+        while (prevReal >= 0) {
+          const s = result[prevReal].trim();
+          if (s === '') { prevReal = -1; break; }
+          if (s.startsWith('#')) { prevReal--; continue; }
+          break;
+        }
 
-        if (prev < 0) {
-          desired = '';
-        } else {
-          const immediatePrev = result[idx - 1];
-          if (lastTokenIsContinuation(immediatePrev)) {
-            desired = tab;
-          } else {
-            desired = getLineIndent(result[prev]);
+        if (chainRootIdx >= 0 && prevReal >= 0 && lastTokenIsContinuation(result[prevReal])) {
+          // Continuation of an active chain. Base indent is one tab deeper
+          // than the chain root; each distinct NESTING-major op that has
+          // appeared in the chain so far adds another tab.
+          const rootIndent = getLineIndent(result[chainRootIdx]);
+          const seen = new Set<string>();
+          for (let i = chainRootIdx; i < idx; i++) {
+            for (const op of nestingMajorsInLine(result[i])) seen.add(op);
           }
+          const levels = Math.max(1, seen.size);
+          desired = rootIndent + tab.repeat(levels);
+        } else if (stripped[0] === '{' && prevReal >= 0) {
+          // Block body of the preceding statement (e.g. `function()` on one
+          // line, `{` on the next). Inherit the preceding line's indent.
+          desired = getLineIndent(result[prevReal]);
+        } else {
+          desired = '';
         }
       }
 
@@ -467,6 +501,19 @@ export function reindentLines(
       prevIdxAtDepth.clear();
     } else if (!stripped.startsWith('#')) {
       prevIdxAtDepth.set(stack.length, idx);
+    }
+
+    // Update top-level chain tracking. Blank lines break the chain; comments
+    // are transparent; lines ending inside brackets preserve the chain so it
+    // can resume when the block closes.
+    if (stripped === '') {
+      chainRootIdx = -1;
+    } else if (!stripped.startsWith('#') && stack.length === 0) {
+      if (lastTokenIsContinuation(newLine)) {
+        if (chainRootIdx === -1) chainRootIdx = idx;
+      } else {
+        chainRootIdx = -1;
+      }
     }
   }
 

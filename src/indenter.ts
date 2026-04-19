@@ -53,12 +53,29 @@ const MATCH_CLOSE: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
 const MATCH_OPEN:  Record<string, string> = { '(': ')', '[': ']', '{': '}' };
 
 // Top-level continuation operators — longest first for greedy matching.
-// Note: bare '=' intentionally excluded (named args handled by bracket context).
+// '=' is included so lines ending with e.g. `x =` chain onto the next line.
+// Named-arg '=' lives inside brackets, so it never reaches the top-level
+// continuation path.
 const CONTINUATION_OPS = [
   '&&', '||', '|>', '%>%', ':=', '<-', '->',
   '==', '!=', '<=', '>=',
-  '+', '-', '*', '/', '&', '|', '~',
+  '+', '-', '*', '/', '&', '|', '~', '=',
 ];
+
+// "Major" continuation operators. Each distinct major op appearing in a
+// top-level chain opens one extra level of indent for subsequent lines —
+// so e.g. `a <- b ~ c := d` nests three levels deep. Operators not in this
+// set (+, -, *, /, &&, ||, ...) continue at the current chain level.
+// Repetitions of the same op don't stack (a pipe chain `a %>% b %>% c`
+// is flat), which is why we count DISTINCT majors rather than occurrences.
+// The lookbehind/lookahead around '=' keeps it from matching inside
+// ==, !=, <=, >=.
+const MAJOR_OPS_RE = /<<-|->>|<-|->|:=|%>%|\|>|~|(?<![<>=!])=(?!=)/g;
+
+// Nesting-major operators: majors that open an additional indent level when
+// they appear in a top-level chain. Pipe operators (%>%, |>) are excluded —
+// pipe chains stay flat, so `a %>% b` does not nest under a preceding `<-`.
+const NESTING_MAJOR_OPS_RE = /<<-|->>|<-|->|:=|~|(?<![<>=!])=(?!=)/g;
 
 // } else { and } else if (...) {
 const ELSE_RE = /^\s*\}\s*else(\s+if\s*\(.*\))?\s*\{?\s*$/;
@@ -229,6 +246,59 @@ function prevTopLevel(
 }
 
 /**
+ * Collect the set of distinct MAJOR_OPS that appear in the chain ending at
+ * `prev`. Walks back the same way chainRootIndent does so a chain that
+ * closes a multi-line bracketed opener (e.g. `geom_point(...)` across a
+ * ggplot chain) still counts the root's majors.
+ */
+function majorOpsInLine(line: string): Set<string> {
+  const cleaned = blankStringsAndComments(line);
+  const found = new Set<string>();
+  MAJOR_OPS_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = MAJOR_OPS_RE.exec(cleaned)) !== null) found.add(m[0]);
+  return found;
+}
+
+function nestingMajorsInLine(line: string): Set<string> {
+  const cleaned = blankStringsAndComments(line);
+  const found = new Set<string>();
+  NESTING_MAJOR_OPS_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = NESTING_MAJOR_OPS_RE.exec(cleaned)) !== null) found.add(m[0]);
+  return found;
+}
+
+function majorOpsInChain(
+  result: string[],
+  prev: number,
+  topLevelStarts: Set<number>,
+  topLevelContinuations: Set<number>,
+): Set<string> {
+  const found = new Set<string>();
+  let p = prev;
+  while (p >= 0) {
+    for (const op of majorOpsInLine(result[p])) found.add(op);
+    const candidate = prevTopLevel(result, p, topLevelStarts);
+    if (candidate < 0) break;
+    const pIndent = getLineIndent(result[p]).length;
+    const candIndent = getLineIndent(result[candidate]).length;
+    if (topLevelContinuations.has(candidate)) {
+      p = candidate;
+    } else if (candIndent >= pIndent) {
+      // Chain-interior line (non-continuation at same-or-greater indent).
+      p = candidate;
+    } else {
+      // Strictly less indent — candidate IS the chain root. Include its
+      // majors and continue to add earlier roots if any.
+      for (const op of majorOpsInLine(result[candidate])) found.add(op);
+      p = candidate;
+    }
+  }
+  return found;
+}
+
+/**
  * Walk back through consecutive top-level continuations to find the root
  * of the chain (the line not itself preceded by a continuation).
  * Returns the indent of that root line.
@@ -284,7 +354,16 @@ export function reindentLines(
   const result = [...lines];
   const stack: BracketFrame[] = [];
   const topLevelStarts      = new Set<number>();
-  const topLevelContinuations = new Set<number>();
+  // Last real-line index at each EOL stack depth. Used inside brackets to add
+  // an extra tab when the previous line in the same scope ended with a
+  // continuation operator. Blank lines clear it (hard boundary); comments
+  // pass through unchanged (transparent).
+  const prevIdxAtDepth = new Map<number, number>();
+  // Index of the root line of an active top-level chain, or -1. A chain opens
+  // on the first line that ends at top-level with a continuation op; it stays
+  // open across bracketed blocks (e.g. `} %>%`) and closes when a top-level
+  // line ends without continuation or a blank line intervenes.
+  let chainRootIdx = -1;
 
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx];
@@ -339,17 +418,41 @@ export function reindentLines(
             : owner.lineIndent + tab;
         }
 
+        // Extra tab when the previous non-blank line at this depth ended
+        // with a continuation operator.
+        const prevSameDepth = prevIdxAtDepth.get(stack.length);
+        if (prevSameDepth !== undefined && lastTokenIsContinuation(result[prevSameDepth])) {
+          desired += tab;
+        }
+
       // Top-level line
       } else {
-        const prev = prevTopLevel(result, idx, topLevelStarts);
+        // Walk back to the nearest real line (skip comments, stop at blank).
+        let prevReal = idx - 1;
+        while (prevReal >= 0) {
+          const s = result[prevReal].trim();
+          if (s === '') { prevReal = -1; break; }
+          if (s.startsWith('#')) { prevReal--; continue; }
+          break;
+        }
 
-        if (prev < 0) {
-          desired = '';
-        } else if (topLevelContinuations.has(prev)) {
-          // Part of a pipe/ggplot chain — all steps share root_indent + tab
-          desired = chainRootIndent(result, prev, topLevelStarts, topLevelContinuations) + tab;
+        if (chainRootIdx >= 0 && prevReal >= 0 && lastTokenIsContinuation(result[prevReal])) {
+          // Continuation of an active chain. Base indent is one tab deeper
+          // than the chain root; each distinct NESTING-major op that has
+          // appeared in the chain so far adds another tab.
+          const rootIndent = getLineIndent(result[chainRootIdx]);
+          const seen = new Set<string>();
+          for (let i = chainRootIdx; i < idx; i++) {
+            for (const op of nestingMajorsInLine(result[i])) seen.add(op);
+          }
+          const levels = Math.max(1, seen.size);
+          desired = rootIndent + tab.repeat(levels);
+        } else if (stripped[0] === '{' && prevReal >= 0) {
+          // Block body of the preceding statement (e.g. `function()` on one
+          // line, `{` on the next). Inherit the preceding line's indent.
+          desired = getLineIndent(result[prevReal]);
         } else {
-          desired = getLineIndent(result[prev]);
+          desired = '';
         }
       }
 
@@ -393,9 +496,24 @@ export function reindentLines(
       }
     }
 
-    // Record top-level continuation after stack update (needs EOL stack state)
-    if (stack.length === 0 && topLevelStarts.has(idx) && lastTokenIsContinuation(newLine)) {
-      topLevelContinuations.add(idx);
+    // Update per-depth tracker. Blank line = hard boundary; comment = transparent.
+    if (stripped === '') {
+      prevIdxAtDepth.clear();
+    } else if (!stripped.startsWith('#')) {
+      prevIdxAtDepth.set(stack.length, idx);
+    }
+
+    // Update top-level chain tracking. Blank lines break the chain; comments
+    // are transparent; lines ending inside brackets preserve the chain so it
+    // can resume when the block closes.
+    if (stripped === '') {
+      chainRootIdx = -1;
+    } else if (!stripped.startsWith('#') && stack.length === 0) {
+      if (lastTokenIsContinuation(newLine)) {
+        if (chainRootIdx === -1) chainRootIdx = idx;
+      } else {
+        chainRootIdx = -1;
+      }
     }
   }
 

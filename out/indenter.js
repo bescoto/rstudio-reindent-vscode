@@ -239,7 +239,7 @@ function chainRootIndent(result, start, topLevelStarts, topLevelContinuations) {
  *
  * Blank lines are preserved unchanged.
  */
-function reindentLines(lines, opts) {
+function reindentLines(lines, opts, ctx) {
     const tab = ' '.repeat(Math.max(1, Math.min(8, opts.tabWidth)));
     const { verticalAlign } = opts;
     const result = [...lines];
@@ -254,7 +254,10 @@ function reindentLines(lines, opts) {
             topLevelStarts.add(idx);
         // ── Compute desired indent ───────────────────────────────────────────────
         let newLine;
-        if (idx === 0 || stripped === '') {
+        // A blank line targeted by ctx.blankIndentFor falls through to the indent
+        // computation so the emitted line is the expected indent string.
+        const isTargetBlank = stripped === '' && ctx?.blankIndentFor === idx;
+        if (!isTargetBlank && (idx === 0 || stripped === '')) {
             newLine = line;
         }
         else {
@@ -378,11 +381,15 @@ function extractRRanges(lines) {
  * Each block gets its own fresh bracket stack.
  * Prose and non-R fences are untouched.
  */
-function reindentRmdChunks(lines, opts) {
+function reindentRmdChunks(lines, opts, ctx) {
     const result = [...lines];
+    const target = ctx?.blankIndentFor;
     for (const [start, end] of extractRRanges(lines)) {
         const chunk = lines.slice(start, end + 1);
-        const reindented = reindentLines(chunk, opts);
+        const chunkCtx = (target !== undefined && target >= start && target <= end)
+            ? { blankIndentFor: target - start }
+            : undefined;
+        const reindented = reindentLines(chunk, opts, chunkCtx);
         result.splice(start, end - start + 1, ...reindented);
     }
     return result;

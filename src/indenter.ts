@@ -17,6 +17,17 @@ export interface ReindentOptions {
   tabWidth: number;       // spaces per indent level
 }
 
+/**
+ * Internal per-invocation context. Not a user setting — used by the Ctrl+I
+ * command path to ask the reindenter "what indent does this blank line want?".
+ * The formatter path must leave this undefined so blank lines stay preserved.
+ */
+export interface ReindentCtx {
+  // Line index of a blank/whitespace-only line whose expected indent should be
+  // emitted instead of being preserved. All other blank lines are preserved.
+  blankIndentFor?: number;
+}
+
 interface BracketToken {
   kind: 'open' | 'close';
   ch: string;
@@ -262,7 +273,11 @@ function chainRootIndent(
  *
  * Blank lines are preserved unchanged.
  */
-export function reindentLines(lines: string[], opts: ReindentOptions): string[] {
+export function reindentLines(
+  lines: string[],
+  opts: ReindentOptions,
+  ctx?: ReindentCtx,
+): string[] {
   const tab = ' '.repeat(Math.max(1, Math.min(8, opts.tabWidth)));
   const { verticalAlign } = opts;
 
@@ -281,7 +296,11 @@ export function reindentLines(lines: string[], opts: ReindentOptions): string[] 
     // ── Compute desired indent ───────────────────────────────────────────────
     let newLine: string;
 
-    if (idx === 0 || stripped === '') {
+    // A blank line targeted by ctx.blankIndentFor falls through to the indent
+    // computation so the emitted line is the expected indent string.
+    const isTargetBlank = stripped === '' && ctx?.blankIndentFor === idx;
+
+    if (!isTargetBlank && (idx === 0 || stripped === '')) {
       newLine = line;
 
     } else {
@@ -410,11 +429,19 @@ function extractRRanges(lines: string[]): Array<[number, number]> {
  * Each block gets its own fresh bracket stack.
  * Prose and non-R fences are untouched.
  */
-export function reindentRmdChunks(lines: string[], opts: ReindentOptions): string[] {
+export function reindentRmdChunks(
+  lines: string[],
+  opts: ReindentOptions,
+  ctx?: ReindentCtx,
+): string[] {
   const result = [...lines];
+  const target = ctx?.blankIndentFor;
   for (const [start, end] of extractRRanges(lines)) {
     const chunk = lines.slice(start, end + 1);
-    const reindented = reindentLines(chunk, opts);
+    const chunkCtx = (target !== undefined && target >= start && target <= end)
+      ? { blankIndentFor: target - start }
+      : undefined;
+    const reindented = reindentLines(chunk, opts, chunkCtx);
     result.splice(start, end - start + 1, ...reindented);
   }
   return result;

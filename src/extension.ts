@@ -14,7 +14,7 @@
  */
 
 import * as vscode from 'vscode';
-import { reindentLines, reindentRmdChunks, ReindentOptions } from './indenter';
+import { reindentLines, reindentRmdChunks, ReindentOptions, ReindentCtx } from './indenter';
 
 // Language IDs recognised by VSCode for R-family files.
 // 'r'      — base R language support (e.g. REditorSupport.r extension)
@@ -56,7 +56,8 @@ function computeEdits(
   document: vscode.TextDocument,
   range: vscode.Range,
   opts: ReindentOptions,
-): vscode.TextEdit[] {
+  ctx?: ReindentCtx,
+): { edits: vscode.TextEdit[], reindented: string[] } {
   const startLine = range.start.line;
   const endLine   = range.end.line;
 
@@ -74,8 +75,8 @@ function computeEdits(
   // Reindent the full document (or all chunks) so context is correct, then
   // only emit edits for lines inside the requested range.
   const reindented = isRmd
-    ? reindentRmdChunks(allLines, opts)
-    : reindentLines(allLines, opts);
+    ? reindentRmdChunks(allLines, opts, ctx)
+    : reindentLines(allLines, opts, ctx);
 
   const edits: vscode.TextEdit[] = [];
   for (let i = startLine; i <= endLine; i++) {
@@ -85,7 +86,7 @@ function computeEdits(
     }
   }
 
-  return edits;
+  return { edits, reindented };
 }
 
 
@@ -101,6 +102,13 @@ function reindentLinesCommand(editor: vscode.TextEditor): void {
     );
     return;
   }
+
+  // Empty-selection on a blank/whitespace-only line: compute the expected
+  // indent for that line and move the cursor to the end of it. All other
+  // blank lines in the document are still preserved unchanged.
+  const cursorLine = editor.selection.active.line;
+  const onBlankLine =
+    editor.selection.isEmpty && doc.lineAt(cursorLine).text.trim() === '';
 
   // If nothing is selected, operate on the entire document.
   let range: vscode.Range;
@@ -118,9 +126,26 @@ function reindentLinesCommand(editor: vscode.TextEditor): void {
     );
   }
 
-  const edits = computeEdits(doc, range, opts);
+  const ctx: ReindentCtx | undefined = onBlankLine
+    ? { blankIndentFor: cursorLine }
+    : undefined;
+  const { edits, reindented } = computeEdits(doc, range, opts, ctx);
+
+  // Cursor target col for the blank-line case: length of the computed indent.
+  // Only move the cursor if an indent was actually produced (col > 0) — a
+  // top-level blank line (col === 0) is left alone so Ctrl+I stays a no-op.
+  const blankTargetCol = onBlankLine ? reindented[cursorLine].length : 0;
+
   if (edits.length === 0) {
-    vscode.window.setStatusBarMessage('R Reindent: no changes', 2000);
+    if (onBlankLine && blankTargetCol > 0
+        && editor.selection.active.character !== blankTargetCol) {
+      // Line already holds the right indent but the cursor is elsewhere on it.
+      const pos = new vscode.Position(cursorLine, blankTargetCol);
+      editor.selection = new vscode.Selection(pos, pos);
+      editor.revealRange(new vscode.Range(pos, pos));
+    } else {
+      vscode.window.setStatusBarMessage('R Reindent: no changes', 2000);
+    }
     return;
   }
 
@@ -129,12 +154,16 @@ function reindentLinesCommand(editor: vscode.TextEditor): void {
       editBuilder.replace(edit.range, edit.newText);
     }
   }).then(success => {
-    if (success) {
-      vscode.window.setStatusBarMessage(
-        `R Reindent: ${edits.length} line${edits.length !== 1 ? 's' : ''} changed`,
-        2000,
-      );
+    if (!success) return;
+    if (onBlankLine && blankTargetCol > 0) {
+      const pos = new vscode.Position(cursorLine, blankTargetCol);
+      editor.selection = new vscode.Selection(pos, pos);
+      editor.revealRange(new vscode.Range(pos, pos));
     }
+    vscode.window.setStatusBarMessage(
+      `R Reindent: ${edits.length} line${edits.length !== 1 ? 's' : ''} changed`,
+      2000,
+    );
   });
 }
 
@@ -158,7 +187,9 @@ class RReindentFormattingProvider
     _formattingOptions: vscode.FormattingOptions,
     _token: vscode.CancellationToken,
   ): vscode.TextEdit[] {
-    return computeEdits(document, range, getOptions());
+    // Formatter path deliberately omits the ctx arg: Shift+Alt+F must never
+    // fill blank lines with whitespace — that behavior belongs to Ctrl+I only.
+    return computeEdits(document, range, getOptions()).edits;
   }
 }
 

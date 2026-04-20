@@ -6,8 +6,8 @@
  *   • Command "R: Reindent Lines"  (palette + context menu + keybinding)
  *   • DocumentRangeFormattingEditProvider for R / Quarto / RMarkdown
  *
- * The command operates on the current selection, or the whole document if
- * nothing is selected — mirroring RStudio's Ctrl+I / Cmd+I behaviour.
+ * The command operates on the current selection, or the current line if
+ * nothing is selected.
  *
  * The formatting provider integrates with VSCode's built-in format-selection
  * (Ctrl+K Ctrl+F / Shift+Alt+F) so the extension also participates in the
@@ -119,10 +119,10 @@ function reindentLinesCommand(editor) {
     // blank lines in the document are still preserved unchanged.
     const cursorLine = editor.selection.active.line;
     const onBlankLine = editor.selection.isEmpty && doc.lineAt(cursorLine).text.trim() === '';
-    // If nothing is selected, operate on the entire document.
+    // If nothing is selected, operate on just the current line.
     let range;
     if (editor.selection.isEmpty) {
-        range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(doc.lineCount - 1, doc.lineAt(doc.lineCount - 1).text.length));
+        range = new vscode.Range(new vscode.Position(cursorLine, 0), new vscode.Position(cursorLine, doc.lineAt(cursorLine).text.length));
     }
     else {
         // Expand selection to full lines so partial-line selections work cleanly.

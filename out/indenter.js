@@ -170,6 +170,33 @@ function isCommentLine(line) {
     const t = line.trimStart();
     return t === '' || t.startsWith('#');
 }
+// Binary operators that can appear at the START of a continuation line
+// ("leading operator" style, as in pipe chains or ggplot `+` chains).
+// Longest-first for greedy matching. Unary-ambiguous chars (- *) are
+// excluded so unary uses don't get shifted.
+const LEADING_OPS = [
+    '&&', '||', '|>', '%>%', ':=', '<-', '->',
+    '==', '!=', '<=', '>=',
+    '+', '/', '&', '|', '~',
+];
+function startsWithLeadingOp(stripped) {
+    if (!stripped)
+        return false;
+    for (const op of LEADING_OPS) {
+        if (stripped.startsWith(op)) {
+            const after = stripped[op.length];
+            if (after === undefined || after === ' ' || after === '\t')
+                return true;
+        }
+    }
+    const pm = PERCENT_OP_RE.exec(stripped);
+    if (pm && pm.index === 0) {
+        const after = stripped[pm[0].length];
+        if (after === undefined || after === ' ' || after === '\t')
+            return true;
+    }
+    return false;
+}
 function lastTokenIsContinuation(line) {
     const cleaned = blankStringsAndComments(line).trimEnd();
     if (!cleaned)
@@ -349,6 +376,13 @@ function reindentLines(lines, opts, ctx) {
                 // Inside a bracket — vertical align or tab-stop
             }
             else if (owner !== null) {
+                // Leading-operator style: when a continuation line inside `(` starts
+                // with a binary operator (|>, +, ~, …), ESS shifts it one column past
+                // the vertical-align position so the operator visually sits left of
+                // the aligned argument content.
+                const leadingOpShift = startsWithLeadingOp(stripped) &&
+                    verticalAlign && owner.ch === '(' && !owner.hanging
+                    ? 1 : 0;
                 if (owner.ch === '(' && owner.blockHanging) {
                     // `(` whose line ends inside an open block: after the block closes,
                     // subsequent args sit at the paren's lineIndent (no +tab).
@@ -361,17 +395,17 @@ function reindentLines(lines, opts, ctx) {
                 }
                 else if (idx - 1 === owner.lineNo) {
                     desired = (verticalAlign && owner.ch === '(' && !owner.hanging)
-                        ? ' '.repeat(owner.col + 1)
+                        ? ' '.repeat(owner.col + 1 + leadingOpShift)
                         : owner.lineIndent + tab;
                 }
                 else if (owner.ch === '(') {
                     desired = (verticalAlign && !owner.hanging)
-                        ? ' '.repeat(owner.col + 1)
+                        ? ' '.repeat(owner.col + 1 + leadingOpShift)
                         : owner.lineIndent + tab;
                 }
                 else {
                     desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
-                        ? ' '.repeat(owner.col + 1)
+                        ? ' '.repeat(owner.col + 1 + leadingOpShift)
                         : owner.lineIndent + tab;
                 }
                 // Extra tab when the previous non-blank line at this depth ended

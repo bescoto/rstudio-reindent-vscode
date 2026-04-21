@@ -5,8 +5,8 @@
  *   • Command "R: Reindent Lines"  (palette + context menu + keybinding)
  *   • DocumentRangeFormattingEditProvider for R / Quarto / RMarkdown
  *
- * The command operates on the current selection, or the whole document if
- * nothing is selected — mirroring RStudio's Ctrl+I / Cmd+I behaviour.
+ * The command operates on the current selection, or the current line if
+ * nothing is selected.
  *
  * The formatting provider integrates with VSCode's built-in format-selection
  * (Ctrl+K Ctrl+F / Shift+Alt+F) so the extension also participates in the
@@ -72,11 +72,17 @@ function computeEdits(
 
   const isRmd = RMD_LANG_IDS.has(document.languageId);
 
-  // Reindent the full document (or all chunks) so context is correct, then
-  // only emit edits for lines inside the requested range.
+  // Reindent the full document (or all chunks) so context is correct. Lines
+  // outside the caller's range are fed to the reindenter for stack tracking
+  // but left untouched; target lines defer to those existing indents.
+  const rangedCtx: ReindentCtx = {
+    ...(ctx ?? {}),
+    targetStart: startLine,
+    targetEnd:   endLine,
+  };
   const reindented = isRmd
-    ? reindentRmdChunks(allLines, opts, ctx)
-    : reindentLines(allLines, opts, ctx);
+    ? reindentRmdChunks(allLines, opts, rangedCtx)
+    : reindentLines(allLines, opts, rangedCtx);
 
   const edits: vscode.TextEdit[] = [];
   for (let i = startLine; i <= endLine; i++) {
@@ -110,12 +116,12 @@ function reindentLinesCommand(editor: vscode.TextEditor): void {
   const onBlankLine =
     editor.selection.isEmpty && doc.lineAt(cursorLine).text.trim() === '';
 
-  // If nothing is selected, operate on the entire document.
+  // If nothing is selected, operate on just the current line.
   let range: vscode.Range;
   if (editor.selection.isEmpty) {
     range = new vscode.Range(
-      new vscode.Position(0, 0),
-      new vscode.Position(doc.lineCount - 1, doc.lineAt(doc.lineCount - 1).text.length),
+      new vscode.Position(cursorLine, 0),
+      new vscode.Position(cursorLine, doc.lineAt(cursorLine).text.length),
     );
   } else {
     // Expand selection to full lines so partial-line selections work cleanly.

@@ -5,7 +5,7 @@ auto-indent"** behaviour to R, Quarto (`.qmd`), and R Markdown (`.Rmd`) files.
 
 ## What it does
 
-Reindents selected lines (or the whole file) so function arguments align to
+Reindents selected lines (or the current line) so function arguments align to
 the column immediately after the opening bracket — exactly as RStudio's
 `Ctrl+I` / `Cmd+I` "Reindent Lines" command behaves with vertical alignment
 enabled.
@@ -42,7 +42,7 @@ YAML front matter, and non-R fences are left completely unchanged.
 
 | Action | Shortcut |
 |---|---|
-| Reindent selection (or whole file) | `Ctrl+I` / `Cmd+I` |
+| Reindent selection (or current line) | `Ctrl+I` / `Cmd+I` |
 | Command Palette | `R: Reindent Lines` |
 | Right-click context menu | `R: Reindent Lines` |
 | Format Selection (VSCode built-in) | `Shift+Alt+F` / `Ctrl+K Ctrl+F` |
@@ -50,7 +50,7 @@ YAML front matter, and non-R fences are left completely unchanged.
 **With a selection:** only the selected lines are reindented (full lines,
 expanded from the selection).
 
-**Without a selection:** the entire document is reindented.
+**Without a selection:** only the current line is reindented.
 
 ## Settings
 
@@ -74,8 +74,8 @@ npm run compile
 # 4a. Press F5 in VSCode to launch the Extension Development Host, OR
 # 4b. Package for distribution:
 npm install -g @vscode/vsce
-vsce package          # produces r-reindent-0.1.0.vsix
-code --install-extension r-reindent-0.1.0.vsix
+vsce package          # produces r-reindent-0.1.3.vsix
+code --install-extension r-reindent-0.1.3.vsix
 ```
 
 ## Algorithm

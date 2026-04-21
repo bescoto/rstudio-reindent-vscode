@@ -2,7 +2,7 @@
   "name": "r-reindent",
   "displayName": "R Reindent Lines",
   "description": "RStudio-style vertical argument alignment for R, Quarto, and R Markdown files",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "r-reindent",
   "engines": { "vscode": "^1.75.0" },
   "categories": ["Formatters", "Programming Languages"],
@@ -56,7 +56,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test test/runner.mjs test/runner-blank-indent.mjs",
+    "test": "npm run compile && node --test test/runner.mjs test/runner-blank-indent.mjs test/runner-defer-to-prev.mjs",
     "update-known-failures": "npm run compile && node test/update-known-failures.mjs"
   },
   "devDependencies": {

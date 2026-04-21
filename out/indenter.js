@@ -355,12 +355,27 @@ function reindentLines(lines, opts, ctx) {
         // Track top-level status before processing this line's tokens
         if (stack.length === 0)
             topLevelStarts.add(idx);
+        // Capture the frame that owned us at the START of the line, before any
+        // bracket tokens on this line change the stack. This frame is where we
+        // record prevArgLine for defer-to-prev logic on subsequent lines.
+        const startOwner = stack.length > 0 ? stack[stack.length - 1] : null;
         // ── Compute desired indent ───────────────────────────────────────────────
         let newLine;
         // A blank line targeted by ctx.blankIndentFor falls through to the indent
         // computation so the emitted line is the expected indent string.
         const isTargetBlank = stripped === '' && ctx?.blankIndentFor === idx;
+        // Lines outside the caller's target range are preserved verbatim. We still
+        // tokenize them below so the bracket stack is correct for later target
+        // lines; the general rule is that target lines defer to the indentation
+        // already on the page. targetBlank trumps targetRange.
+        const targetStart = ctx?.targetStart;
+        const targetEnd = ctx?.targetEnd ?? targetStart;
+        const inTargetRange = targetStart === undefined
+            || (idx >= targetStart && idx <= targetEnd);
         if (!isTargetBlank && (idx === 0 || stripped === '')) {
+            newLine = line;
+        }
+        else if (!isTargetBlank && !inTargetRange) {
             newLine = line;
         }
         else {
@@ -413,6 +428,22 @@ function reindentLines(lines, opts, ctx) {
                 const prevSameDepth = prevIdxAtDepth.get(stack.length);
                 if (prevSameDepth !== undefined && lastTokenIsContinuation(result[prevSameDepth])) {
                     desired += tab;
+                }
+                // Defer to the previous arg line of this same bracket frame WHEN that
+                // line is outside the caller's target range — i.e. user content we
+                // were asked not to touch. In that case the user's chosen indent is
+                // authoritative and a later target arg should align with it rather
+                // than the algorithmic default. Adjust for leading-op shift so non-op
+                // and op-led args still line up.
+                const prevArg = owner.prevArgLine;
+                if (prevArg !== undefined && targetStart !== undefined
+                    && (prevArg < targetStart || prevArg > targetEnd)) {
+                    const prevLine = result[prevArg];
+                    const prevCol = getLineIndent(prevLine).length;
+                    const isVA = verticalAlign && owner.ch === '(' && !owner.hanging;
+                    const prevOp = isVA && startsWithLeadingOp(prevLine.trimStart()) ? 1 : 0;
+                    const curOp = isVA && startsWithLeadingOp(stripped) ? 1 : 0;
+                    desired = ' '.repeat(Math.max(0, prevCol - prevOp + curOp));
                 }
                 // Top-level line
             }
@@ -493,9 +524,19 @@ function reindentLines(lines, opts, ctx) {
         // Update per-depth tracker. Blank line = hard boundary; comment = transparent.
         if (stripped === '') {
             prevIdxAtDepth.clear();
+            // Blank lines also reset every frame's defer anchor — a blank line is
+            // a hard continuation boundary, so a later arg should re-align against
+            // the opener rather than inheriting some pre-blank sibling's indent.
+            for (const f of stack)
+                f.prevArgLine = undefined;
         }
         else if (!stripped.startsWith('#')) {
             prevIdxAtDepth.set(stack.length, idx);
+            // Record this line as the previous-arg of the frame that owned us when
+            // the line began. Lines starting at top level have no owner. Comments
+            // are transparent and skipped.
+            if (startOwner !== null)
+                startOwner.prevArgLine = idx;
         }
         // Update top-level chain tracking. Blank lines break the chain; comments
         // are transparent; lines ending inside brackets preserve the chain so it
@@ -541,12 +582,30 @@ function extractRRanges(lines) {
  */
 function reindentRmdChunks(lines, opts, ctx) {
     const result = [...lines];
-    const target = ctx?.blankIndentFor;
+    const blankTarget = ctx?.blankIndentFor;
+    const tStart = ctx?.targetStart;
+    const tEnd = ctx?.targetEnd ?? tStart;
     for (const [start, end] of extractRRanges(lines)) {
         const chunk = lines.slice(start, end + 1);
-        const chunkCtx = (target !== undefined && target >= start && target <= end)
-            ? { blankIndentFor: target - start }
-            : undefined;
+        const chunkCtx = {};
+        if (blankTarget !== undefined && blankTarget >= start && blankTarget <= end) {
+            chunkCtx.blankIndentFor = blankTarget - start;
+        }
+        if (tStart !== undefined) {
+            // Intersect the caller's target range with this chunk, clipped to
+            // chunk-relative indices. If they don't overlap, skip reindent entirely
+            // for this chunk by passing an empty range.
+            const lo = Math.max(tStart, start);
+            const hi = Math.min(tEnd, end);
+            if (lo > hi) {
+                chunkCtx.targetStart = 0;
+                chunkCtx.targetEnd = -1;
+            }
+            else {
+                chunkCtx.targetStart = lo - start;
+                chunkCtx.targetEnd = hi - start;
+            }
+        }
         const reindented = reindentLines(chunk, opts, chunkCtx);
         result.splice(start, end - start + 1, ...reindented);
     }

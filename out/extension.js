@@ -92,11 +92,17 @@ function computeEdits(document, range, opts, ctx) {
         allLines.push(document.lineAt(i).text);
     }
     const isRmd = RMD_LANG_IDS.has(document.languageId);
-    // Reindent the full document (or all chunks) so context is correct, then
-    // only emit edits for lines inside the requested range.
+    // Reindent the full document (or all chunks) so context is correct. Lines
+    // outside the caller's range are fed to the reindenter for stack tracking
+    // but left untouched; target lines defer to those existing indents.
+    const rangedCtx = {
+        ...(ctx ?? {}),
+        targetStart: startLine,
+        targetEnd: endLine,
+    };
     const reindented = isRmd
-        ? (0, indenter_1.reindentRmdChunks)(allLines, opts, ctx)
-        : (0, indenter_1.reindentLines)(allLines, opts, ctx);
+        ? (0, indenter_1.reindentRmdChunks)(allLines, opts, rangedCtx)
+        : (0, indenter_1.reindentLines)(allLines, opts, rangedCtx);
     const edits = [];
     for (let i = startLine; i <= endLine; i++) {
         if (reindented[i] !== allLines[i]) {

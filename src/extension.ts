@@ -72,11 +72,17 @@ function computeEdits(
 
   const isRmd = RMD_LANG_IDS.has(document.languageId);
 
-  // Reindent the full document (or all chunks) so context is correct, then
-  // only emit edits for lines inside the requested range.
+  // Reindent the full document (or all chunks) so context is correct. Lines
+  // outside the caller's range are fed to the reindenter for stack tracking
+  // but left untouched; target lines defer to those existing indents.
+  const rangedCtx: ReindentCtx = {
+    ...(ctx ?? {}),
+    targetStart: startLine,
+    targetEnd:   endLine,
+  };
   const reindented = isRmd
-    ? reindentRmdChunks(allLines, opts, ctx)
-    : reindentLines(allLines, opts, ctx);
+    ? reindentRmdChunks(allLines, opts, rangedCtx)
+    : reindentLines(allLines, opts, rangedCtx);
 
   const edits: vscode.TextEdit[] = [];
   for (let i = startLine; i <= endLine; i++) {

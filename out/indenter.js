@@ -213,6 +213,25 @@ function lastTokenIsContinuation(line) {
         return true;
     return false;
 }
+/**
+ * True if `line` ends inside an expression where the next thing would
+ * naturally be a binary operator — i.e., an unterminated expression term
+ * (identifier, literal, closing `)`/`]`), not a comma, not an open bracket,
+ * and not an already-dangling operator.
+ */
+function endsMidExpression(line) {
+    const cleaned = blankStringsAndComments(line).trimEnd();
+    if (!cleaned)
+        return false;
+    const last = cleaned[cleaned.length - 1];
+    if (last === ',')
+        return false;
+    if (OPEN_BRACKETS.has(last))
+        return false;
+    if (lastTokenIsContinuation(line))
+        return false;
+    return true;
+}
 // ─── Utility ──────────────────────────────────────────────────────────────────
 function getLineIndent(line) {
     return line.match(/^(\s*)/)?.[1] ?? '';
@@ -394,8 +413,15 @@ function reindentLines(lines, opts, ctx) {
                 // Leading-operator style: when a continuation line inside `(` starts
                 // with a binary operator (|>, +, ~, …), ESS shifts it one column past
                 // the vertical-align position so the operator visually sits left of
-                // the aligned argument content.
-                const leadingOpShift = startsWithLeadingOp(stripped) &&
+                // the aligned argument content. A blank Ctrl+I target gets the same
+                // shift when the prior same-depth line ended mid-expression — the
+                // user is about to type an operator, so place the cursor where it
+                // would go (e.g. after `(foo`, cursor sits on the first `o`).
+                const prevSameDepthForShift = prevIdxAtDepth.get(stack.length);
+                const blankExpectsOp = isTargetBlank &&
+                    prevSameDepthForShift !== undefined &&
+                    endsMidExpression(result[prevSameDepthForShift]);
+                const leadingOpShift = (startsWithLeadingOp(stripped) || blankExpectsOp) &&
                     verticalAlign && owner.ch === '(' && !owner.hanging
                     ? 1 : 0;
                 if (owner.ch === '(' && owner.blockHanging) {

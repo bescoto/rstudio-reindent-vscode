@@ -34,6 +34,20 @@ test('blank line after Func(a, — vertical align to "a"', () => {
   assertBlankIndent(['Func(a,', ''], 1, '     ');
 });
 
+test('blank line after (foo — shifted one col for expected operator', () => {
+  // `(` at col 0, `f` at col 1, first `o` at col 2. Prev line ends
+  // mid-expression (no comma, no trailing op), so the cursor goes to col 2
+  // where an operator like `+` would be typed (as in `(foo\n  + bar)`).
+  assertBlankIndent(['(foo', ''], 1, '  ');
+});
+
+test('blank line after (foo + — extra tab, no op-shift (operator already there)', () => {
+  // Prev line ends with `+` so content is expected next, not an operator.
+  // The existing "continuation op → +tab" logic applies; no mid-expr shift.
+  // `(` at col 0 → vertical-align col 1 + tab(2) = col 3.
+  assertBlankIndent(['(foo +', ''], 1, '   ');
+});
+
 test('blank first line at top-of-document — empty indent', () => {
   assertBlankIndent([''], 0, '');
 });

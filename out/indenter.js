@@ -49,51 +49,135 @@ const RMD_FENCE_OPEN = /^```\{[Rr](\s|,|\})/;
 const RMD_FENCE_CLOSE = /^```\s*$/;
 // ─── Tokenizer ────────────────────────────────────────────────────────────────
 /**
- * Scan a single R source line and return an array of bracket tokens.
- * Strings (regular, raw, backtick) and # comments are consumed and skipped
- * so brackets inside them are invisible to the indenter.
+ * Scan a single R source line, optionally resuming an open multi-line string
+ * from the previous line. Returns:
+ *   tokens    — bracket tokens outside strings/comments
+ *   cleaned   — copy of `line` with string contents and `#` comments replaced
+ *               by spaces (column-preserving), for safe operator detection
+ *   exitState — non-null if a string is still open at end of line
  */
-function tokenizeLine(line) {
+function scanLine(line, entryState = null) {
+    const chars = line.split('');
+    const n = chars.length;
     const tokens = [];
-    const n = line.length;
     let i = 0;
-    while (i < n) {
-        const ch = line[i];
-        // Line comment
-        if (ch === '#')
-            break;
-        // R raw strings: r"(...)"  r'[...]'  R"{...}"  etc.
-        if ((ch === 'r' || ch === 'R') && i + 1 < n && (line[i + 1] === '"' || line[i + 1] === "'")) {
-            const q = line[i + 1];
-            let j = i + 2;
-            while (j < n && line[j] === '-')
-                j++;
-            if (j < n && OPEN_BRACKETS.has(line[j])) {
-                const closeDelim = MATCH_OPEN[line[j]];
-                j++;
-                while (j < n && line[j] !== closeDelim)
-                    j++;
-                while (j < n && line[j] !== q)
-                    j++;
+    let state = entryState;
+    // Resume scanning inside a string carried over from the prior line.
+    if (state !== null) {
+        if (state.kind === 'str') {
+            const q = state.quote;
+            while (i < n) {
+                const c = chars[i];
+                if (c === '\\') {
+                    chars[i] = ' ';
+                    if (i + 1 < n)
+                        chars[i + 1] = ' ';
+                    i += 2;
+                    continue;
+                }
+                if (c === q) {
+                    chars[i] = ' ';
+                    i++;
+                    state = null;
+                    break;
+                }
+                chars[i] = ' ';
+                i++;
             }
-            i = j + 1;
-            continue;
         }
-        // Regular string literals: " ' `
+        else {
+            const q = state.quote;
+            const close = state.close;
+            while (i < n) {
+                if (chars[i] === close) {
+                    let j = i + 1;
+                    while (j < n && chars[j] === '-')
+                        j++;
+                    if (j < n && chars[j] === q) {
+                        for (let k = i; k <= j; k++)
+                            chars[k] = ' ';
+                        i = j + 1;
+                        state = null;
+                        break;
+                    }
+                }
+                chars[i] = ' ';
+                i++;
+            }
+        }
+        if (state !== null) {
+            return { tokens, cleaned: chars.join(''), exitState: state };
+        }
+    }
+    while (i < n) {
+        const ch = chars[i];
+        if (ch === '#') {
+            for (let j = i; j < n; j++)
+                chars[j] = ' ';
+            break;
+        }
+        // R raw strings: r"(...)"  r'[...]'  R"{...}"  r"--[...]--"  etc.
+        if ((ch === 'r' || ch === 'R') && i + 1 < n && (chars[i + 1] === '"' || chars[i + 1] === "'")) {
+            const q = chars[i + 1];
+            let j = i + 2;
+            while (j < n && chars[j] === '-')
+                j++;
+            if (j < n && OPEN_BRACKETS.has(chars[j])) {
+                const closeDelim = MATCH_OPEN[chars[j]];
+                j++;
+                let found = false;
+                while (j < n) {
+                    if (chars[j] === closeDelim) {
+                        let k = j + 1;
+                        while (k < n && chars[k] === '-')
+                            k++;
+                        if (k < n && chars[k] === q) {
+                            for (let m = i; m <= k; m++)
+                                chars[m] = ' ';
+                            j = k + 1;
+                            found = true;
+                            break;
+                        }
+                    }
+                    j++;
+                }
+                if (!found) {
+                    for (let m = i; m < n; m++)
+                        chars[m] = ' ';
+                    state = { kind: 'raw', quote: q, close: closeDelim };
+                    i = n;
+                }
+                else {
+                    i = j;
+                }
+                continue;
+            }
+            // `r` / `R` not followed by a raw-string opener — treat as ordinary char.
+        }
         if (ch === '"' || ch === "'" || ch === '`') {
+            const q = ch;
             let j = i + 1;
+            let terminated = false;
             while (j < n) {
-                if (line[j] === '\\') {
+                if (chars[j] === '\\') {
                     j += 2;
                     continue;
                 }
-                if (line[j] === ch) {
+                if (chars[j] === q) {
                     j++;
+                    terminated = true;
                     break;
                 }
                 j++;
             }
-            i = j;
+            const end = Math.min(j, n);
+            for (let k = i; k < end; k++)
+                chars[k] = ' ';
+            if (!terminated && q !== '`') {
+                // Backticks don't span lines in R; only `"` and `'` carry over.
+                state = { kind: 'str', quote: q };
+            }
+            i = end;
             continue;
         }
         if (OPEN_BRACKETS.has(ch)) {
@@ -108,62 +192,13 @@ function tokenizeLine(line) {
         }
         i++;
     }
-    return tokens;
+    return { tokens, cleaned: chars.join(''), exitState: state };
 }
-/**
- * Return a copy of `line` with string contents and # comments replaced by
- * spaces, preserving column positions, for safe operator detection.
- */
+function tokenizeLine(line) {
+    return scanLine(line, null).tokens;
+}
 function blankStringsAndComments(line) {
-    const chars = line.split('');
-    const n = chars.length;
-    let i = 0;
-    while (i < n) {
-        const ch = chars[i];
-        if (ch === '#') {
-            for (let j = i; j < n; j++)
-                chars[j] = ' ';
-            break;
-        }
-        if ((ch === 'r' || ch === 'R') && i + 1 < n && (chars[i + 1] === '"' || chars[i + 1] === "'")) {
-            const q = chars[i + 1];
-            let j = i + 2;
-            while (j < n && chars[j] === '-')
-                j++;
-            if (j < n && OPEN_BRACKETS.has(chars[j])) {
-                const closeDelim = MATCH_OPEN[chars[j]];
-                j++;
-                while (j < n && chars[j] !== closeDelim)
-                    j++;
-                while (j < n && chars[j] !== q)
-                    j++;
-            }
-            for (let k = i; k <= Math.min(j, n - 1); k++)
-                chars[k] = ' ';
-            i = j + 1;
-            continue;
-        }
-        if (ch === '"' || ch === "'" || ch === '`') {
-            let j = i + 1;
-            while (j < n) {
-                if (chars[j] === '\\') {
-                    j += 2;
-                    continue;
-                }
-                if (chars[j] === ch) {
-                    j++;
-                    break;
-                }
-                j++;
-            }
-            for (let k = i; k < Math.min(j, n); k++)
-                chars[k] = ' ';
-            i = j;
-            continue;
-        }
-        i++;
-    }
-    return chars.join('');
+    return scanLine(line, null).cleaned;
 }
 // ─── Continuation detection ───────────────────────────────────────────────────
 function isCommentLine(line) {
@@ -368,11 +403,19 @@ function reindentLines(lines, opts, ctx) {
     // open across bracketed blocks (e.g. `} %>%`) and closes when a top-level
     // line ends without continuation or a blank line intervenes.
     let chainRootIdx = -1;
+    // Multi-line string state carried from the prior line. When non-null at the
+    // start of a line, the line BEGINS inside an open string literal — its
+    // leading whitespace is part of the string contents and must be preserved.
+    let stringState = null;
     for (let idx = 0; idx < lines.length; idx++) {
         const line = lines[idx];
         const stripped = line.trimStart();
-        // Track top-level status before processing this line's tokens
-        if (stack.length === 0)
+        const entryState = stringState;
+        const inString = entryState !== null;
+        // Track top-level status before processing this line's tokens. A line
+        // that begins inside a string is content of the previous statement, not
+        // a new top-level start.
+        if (stack.length === 0 && !inString)
             topLevelStarts.add(idx);
         // Capture the frame that owned us at the START of the line, before any
         // bracket tokens on this line change the stack. This frame is where we
@@ -391,7 +434,12 @@ function reindentLines(lines, opts, ctx) {
         const targetEnd = ctx?.targetEnd ?? targetStart;
         const inTargetRange = targetStart === undefined
             || (idx >= targetStart && idx <= targetEnd);
-        if (!isTargetBlank && (idx === 0 || stripped === '')) {
+        if (inString) {
+            // Line begins inside an unterminated string from a prior line — leading
+            // whitespace is string content, leave it untouched.
+            newLine = line;
+        }
+        else if (!isTargetBlank && (idx === 0 || stripped === '')) {
             newLine = line;
         }
         else if (!isTargetBlank && !inTargetRange) {
@@ -515,13 +563,15 @@ function reindentLines(lines, opts, ctx) {
         result[idx] = newLine;
         // ── Update bracket stack from the REINDENTED line ────────────────────────
         const newIndent = getLineIndent(newLine);
-        const newLineCleaned = blankStringsAndComments(newLine);
+        const scan = scanLine(newLine, entryState);
+        const newLineCleaned = scan.cleaned;
+        stringState = scan.exitState;
         // Tracks the most recent `(` popped on this line: when a `{` is pushed
         // immediately after, the `{` is the body of that parenthesised construct
         // (e.g. `function(args) {`) and should anchor its lineIndent to that
         // construct's line, not to its own column.
         let lastPoppedParenLineIndent = null;
-        for (const tok of tokenizeLine(newLine)) {
+        for (const tok of scan.tokens) {
             if (tok.kind === 'open') {
                 const remainder = newLineCleaned.slice(tok.col + 1);
                 const hanging = remainder.trim() === '';
@@ -547,7 +597,9 @@ function reindentLines(lines, opts, ctx) {
                 }
             }
         }
-        // Update per-depth tracker. Blank line = hard boundary; comment = transparent.
+        // Update per-depth tracker. Blank line = hard boundary; comment = transparent;
+        // lines that begin inside a multi-line string are content of the prior
+        // statement, so they don't update arg-tracking either.
         if (stripped === '') {
             prevIdxAtDepth.clear();
             // Blank lines also reset every frame's defer anchor — a blank line is
@@ -556,7 +608,7 @@ function reindentLines(lines, opts, ctx) {
             for (const f of stack)
                 f.prevArgLine = undefined;
         }
-        else if (!stripped.startsWith('#')) {
+        else if (!stripped.startsWith('#') && !inString) {
             prevIdxAtDepth.set(stack.length, idx);
             // Record this line as the previous-arg of the frame that owned us when
             // the line began. Lines starting at top level have no owner. Comments
@@ -565,12 +617,12 @@ function reindentLines(lines, opts, ctx) {
                 startOwner.prevArgLine = idx;
         }
         // Update top-level chain tracking. Blank lines break the chain; comments
-        // are transparent; lines ending inside brackets preserve the chain so it
-        // can resume when the block closes.
+        // and in-string continuations are transparent; lines ending inside
+        // brackets preserve the chain so it can resume when the block closes.
         if (stripped === '') {
             chainRootIdx = -1;
         }
-        else if (!stripped.startsWith('#') && stack.length === 0) {
+        else if (!stripped.startsWith('#') && !inString && stack.length === 0) {
             if (lastTokenIsContinuation(newLine)) {
                 if (chainRootIdx === -1)
                     chainRootIdx = idx;

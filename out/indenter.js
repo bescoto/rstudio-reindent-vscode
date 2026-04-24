@@ -267,6 +267,40 @@ function endsMidExpression(line) {
         return false;
     return true;
 }
+/**
+ * True if `line` is a control-flow opener whose body is expected on the
+ * following line — i.e., `if/for/while (...)`, `else`, `else if (...)`, or
+ * `repeat`, with no body on the same line. The next non-blank line is then
+ * the implicit body and should be indented one tab deeper than `line`.
+ *
+ * This only fires when the statement's `(...)` has actually closed on this
+ * line (bracket-balanced), so partial openers like `if (x &&` don't qualify.
+ */
+function endsControlOpener(line) {
+    const cleaned = blankStringsAndComments(line).trimEnd();
+    if (!cleaned)
+        return false;
+    if (cleaned.endsWith(')')) {
+        // Find the matching `(` by scanning backwards with a depth counter.
+        let depth = 0;
+        let i = cleaned.length - 1;
+        for (; i >= 0; i--) {
+            const c = cleaned[i];
+            if (c === ')')
+                depth++;
+            else if (c === '(') {
+                depth--;
+                if (depth === 0)
+                    break;
+            }
+        }
+        if (i < 0)
+            return false;
+        const before = cleaned.slice(0, i).trimEnd();
+        return /\b(if|for|while)$/.test(before);
+    }
+    return /(?:^|[^\w.])(?:else|repeat)$/.test(cleaned);
+}
 // ─── Utility ──────────────────────────────────────────────────────────────────
 function getLineIndent(line) {
     return line.match(/^(\s*)/)?.[1] ?? '';
@@ -505,6 +539,17 @@ function reindentLines(lines, opts, ctx) {
                 if (prevSameDepth !== undefined && lastTokenIsContinuation(result[prevSameDepth])) {
                     desired += tab;
                 }
+                // Previous line was a control-flow opener without a body brace
+                // (`if (cond)`, `else`, `else if (cond)`, `for (...)`, `while (...)`,
+                // `repeat`): the current line is the implicit body and sits one tab
+                // deeper than that opener. Skipped when the current line starts with
+                // `{` — a body brace aligns with the opener, it doesn't nest further.
+                if (owner.ch === '{' && stripped[0] !== '{') {
+                    const prevOpener = prevIdxAtDepth.get(stack.length);
+                    if (prevOpener !== undefined && endsControlOpener(result[prevOpener])) {
+                        desired = getLineIndent(result[prevOpener]) + tab;
+                    }
+                }
                 // Defer to the previous arg line of this same bracket frame WHEN that
                 // line is outside the caller's target range — i.e. user content we
                 // were asked not to touch. In that case the user's chosen indent is
@@ -555,6 +600,10 @@ function reindentLines(lines, opts, ctx) {
                     // Block body of the preceding statement (e.g. `function()` on one
                     // line, `{` on the next). Inherit the preceding line's indent.
                     desired = getLineIndent(result[prevReal]);
+                }
+                else if (prevReal >= 0 && endsControlOpener(result[prevReal])) {
+                    // Implicit body of a one-line `if/for/while/else/repeat`.
+                    desired = getLineIndent(result[prevReal]) + tab;
                 }
                 else {
                     desired = '';

@@ -38,24 +38,12 @@ continuation-lines/33
 continuation-lines/40
 
 # control-flow
-control-flow/7
-control-flow/8
 control-flow/11
-control-flow/12
 control-flow/14
 control-flow/15
 control-flow/16
-control-flow/17
-control-flow/18
-control-flow/19
-control-flow/20
 control-flow/21
-control-flow/22
-control-flow/23
 control-flow/24
-control-flow/26
-control-flow/28
-control-flow/29
 
 # function-calls
 function-calls/1

@@ -437,6 +437,11 @@ function reindentLines(lines, opts, ctx) {
     // open across bracketed blocks (e.g. `} %>%`) and closes when a top-level
     // line ends without continuation or a blank line intervenes.
     let chainRootIdx = -1;
+    // Per-depth chain roots for continuation chains inside brackets. Consulted
+    // when indenting lines inside a blockHanging `(`, where args sit at the
+    // paren's lineIndent and a nested-major chain (e.g. `= ... ~ ...`) should
+    // open additional indent levels just like at top level.
+    const chainRootAtDepth = new Map();
     // Multi-line string state carried from the prior line. When non-null at the
     // start of a line, the line BEGINS inside an open string literal — its
     // leading whitespace is part of the string contents and must be preserved.
@@ -534,10 +539,24 @@ function reindentLines(lines, opts, ctx) {
                         : owner.lineIndent + tab;
                 }
                 // Extra tab when the previous non-blank line at this depth ended
-                // with a continuation operator.
+                // with a continuation operator. Inside a blockHanging `(` the chain
+                // acts like a top-level chain: each distinct nesting-major op in
+                // the chain opens another indent level.
                 const prevSameDepth = prevIdxAtDepth.get(stack.length);
                 if (prevSameDepth !== undefined && lastTokenIsContinuation(result[prevSameDepth])) {
-                    desired += tab;
+                    const chainRoot = chainRootAtDepth.get(stack.length);
+                    if (owner.ch === '(' && owner.blockHanging
+                        && chainRoot !== undefined && chainRoot < idx) {
+                        const seen = new Set();
+                        for (let i = chainRoot; i < idx; i++) {
+                            for (const op of nestingMajorsInLine(result[i]))
+                                seen.add(op);
+                        }
+                        desired += tab.repeat(Math.max(1, seen.size));
+                    }
+                    else {
+                        desired += tab;
+                    }
                 }
                 // Previous line was a control-flow opener without a body brace
                 // (`if (cond)`, `else`, `else if (cond)`, `for (...)`, `while (...)`,
@@ -672,14 +691,28 @@ function reindentLines(lines, opts, ctx) {
         // brackets preserve the chain so it can resume when the block closes.
         if (stripped === '') {
             chainRootIdx = -1;
+            chainRootAtDepth.clear();
         }
-        else if (!stripped.startsWith('#') && !inString && stack.length === 0) {
+        else if (!stripped.startsWith('#') && !inString) {
+            if (stack.length === 0) {
+                if (lastTokenIsContinuation(newLine)) {
+                    if (chainRootIdx === -1)
+                        chainRootIdx = idx;
+                }
+                else {
+                    chainRootIdx = -1;
+                }
+            }
+            // Per-depth chain tracking at end-of-line depth. Only the current
+            // depth's chain state is touched; chains at outer depths persist
+            // across intervening nested-bracket lines.
+            const endDepth = stack.length;
             if (lastTokenIsContinuation(newLine)) {
-                if (chainRootIdx === -1)
-                    chainRootIdx = idx;
+                if (!chainRootAtDepth.has(endDepth))
+                    chainRootAtDepth.set(endDepth, idx);
             }
             else {
-                chainRootIdx = -1;
+                chainRootAtDepth.delete(endDepth);
             }
         }
     }

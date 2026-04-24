@@ -83,3 +83,5 @@ logical-operators/9
 
 # specific-situations-and-overrides
 specific-situations-and-overrides/10
+
+# string-literals

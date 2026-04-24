@@ -521,22 +521,21 @@ export function reindentLines(
 
       // Inside a bracket — vertical align or tab-stop
       } else if (owner !== null) {
-        // Leading-operator style: when a continuation line inside `(` starts
-        // with a binary operator (|>, +, ~, …), ESS shifts it one column past
-        // the vertical-align position so the operator visually sits left of
-        // the aligned argument content. A blank Ctrl+I target gets the same
-        // shift when the prior same-depth line ended mid-expression — the
-        // user is about to type an operator, so place the cursor where it
-        // would go (e.g. after `(foo`, cursor sits on the first `o`).
+        // Leading-operator style: a continuation line inside `(` that starts
+        // with a binary operator (|>, +, ~, …) follows the ENCLOSING scope's
+        // indent (one tab past the opener's lineIndent), not the column of
+        // the paren — ESS/RStudio treat leading operators as belonging to
+        // the outer scope rather than the call expression. Blank Ctrl+I
+        // targets get the same treatment when the prior same-depth line
+        // ended mid-expression (user is about to type an operator).
         const prevSameDepthForShift = prevIdxAtDepth.get(stack.length);
         const blankExpectsOp =
           isTargetBlank &&
           prevSameDepthForShift !== undefined &&
           endsMidExpression(result[prevSameDepthForShift]);
-        const leadingOpShift =
+        const useLeadingOpIndent =
           (startsWithLeadingOp(stripped) || blankExpectsOp) &&
-          verticalAlign && owner.ch === '(' && !owner.hanging
-            ? 1 : 0;
+          verticalAlign && owner.ch === '(' && !owner.hanging;
 
         if (owner.ch === '(' && owner.blockHanging) {
           // `(` whose line ends inside an open block: after the block closes,
@@ -546,17 +545,19 @@ export function reindentLines(
           // Lone `{` as a standalone argument inside a hanging `(`: the block
           // anchors at the paren's lineIndent, not one tab deeper.
           desired = owner.lineIndent;
+        } else if (useLeadingOpIndent) {
+          desired = owner.lineIndent + tab;
         } else if (idx - 1 === owner.lineNo) {
           desired = (verticalAlign && owner.ch === '(' && !owner.hanging)
-            ? ' '.repeat(owner.col + 1 + leadingOpShift)
+            ? ' '.repeat(owner.col + 1)
             : owner.lineIndent + tab;
         } else if (owner.ch === '(') {
           desired = (verticalAlign && !owner.hanging)
-            ? ' '.repeat(owner.col + 1 + leadingOpShift)
+            ? ' '.repeat(owner.col + 1)
             : owner.lineIndent + tab;
         } else {
           desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
-            ? ' '.repeat(owner.col + 1 + leadingOpShift)
+            ? ' '.repeat(owner.col + 1)
             : owner.lineIndent + tab;
         }
 

@@ -534,9 +534,11 @@ function reindentLines(lines, opts, ctx) {
                         : owner.lineIndent + tab;
                 }
                 else {
-                    desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
-                        ? ' '.repeat(owner.col + 1)
-                        : owner.lineIndent + tab;
+                    // `[` and `{` both use tab-stop — no vertical alignment.
+                    // This keeps continuation lines inside `[` from staircasing past
+                    // the first inner line (which also uses tab-stop via the
+                    // `idx - 1 === owner.lineNo` branch above).
+                    desired = owner.lineIndent + tab;
                 }
                 // Extra tab when the previous non-blank line at this depth ended
                 // with a continuation operator. Inside a blockHanging `(` the chain
@@ -694,14 +696,23 @@ function reindentLines(lines, opts, ctx) {
             chainRootAtDepth.clear();
         }
         else if (!stripped.startsWith('#') && !inString) {
-            if (stack.length === 0) {
-                if (lastTokenIsContinuation(newLine)) {
-                    if (chainRootIdx === -1)
-                        chainRootIdx = idx;
-                }
-                else {
-                    chainRootIdx = -1;
-                }
+            // A chain opens at the FIRST line involving top level that ends with a
+            // continuation operator — either a line that also ENDS at top level
+            // (classic `a %>%` → next line continues), OR a line that STARTS at
+            // top level but dives into a bracket (e.g. `x[a %>%` opens a pipe
+            // chain rooted at the `x[...` line itself). The start-of-line case
+            // keeps the chain root anchored before the bracket so when the chain
+            // re-emerges (`] %>%` → tail), the tail indents off the outermost
+            // root rather than off the re-emerging line.
+            const startedAtTop = startOwner === null;
+            const endAtTop = stack.length === 0;
+            const endsCont = lastTokenIsContinuation(newLine);
+            if (endsCont && (startedAtTop || endAtTop)) {
+                if (chainRootIdx === -1)
+                    chainRootIdx = idx;
+            }
+            else if (endAtTop && !endsCont) {
+                chainRootIdx = -1;
             }
             // Per-depth chain tracking at end-of-line depth. Only the current
             // depth's chain state is touched; chains at outer depths persist

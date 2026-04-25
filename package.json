@@ -56,7 +56,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test test/runner.mjs test/runner-blank-indent.mjs test/runner-defer-to-prev.mjs test/runner-line-at-a-time.mjs",
+    "test": "npm run compile && node --test test/runner.mjs test/runner-blank-indent.mjs test/runner-defer-to-prev.mjs test/runner-line-at-a-time.mjs test/runner-cursor.mjs",
     "update-known-failures": "npm run compile && node test/update-known-failures.mjs"
   },
   "devDependencies": {

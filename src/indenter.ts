@@ -657,6 +657,12 @@ export function reindentLines(
         // authoritative and a later target arg should align with it rather
         // than the algorithmic default. Adjust for leading-op shift so non-op
         // and op-led args still line up.
+        //
+        // When prev itself ends with a continuation operator we adjust the
+        // deferred column: if prev is the FIRST line of its chain, current is
+        // a chain-continuation and sits one tab deeper; if prev was already
+        // mid-chain (its own prior real line also ended with continuation),
+        // current stays flat with prev — pipe chains don't keep nesting.
         const prevArg = owner.prevArgLine;
         if (prevArg !== undefined && targetStart !== undefined
             && (prevArg < targetStart || prevArg > (targetEnd as number))) {
@@ -665,7 +671,19 @@ export function reindentLines(
           const isVA = verticalAlign && owner.ch === '(' && !owner.hanging;
           const prevOp = isVA && startsWithLeadingOp(prevLine.trimStart()) ? 1 : 0;
           const curOp  = isVA && startsWithLeadingOp(stripped) ? 1 : 0;
-          desired = ' '.repeat(Math.max(0, prevCol - prevOp + curOp));
+          let extra = 0;
+          if (lastTokenIsContinuation(prevLine)) {
+            let priorEndsCont = false;
+            for (let p = prevArg - 1; p >= 0; p--) {
+              const s = result[p].trim();
+              if (s === '') break;            // blank = chain boundary
+              if (s.startsWith('#')) continue; // comment = transparent
+              priorEndsCont = lastTokenIsContinuation(result[p]);
+              break;
+            }
+            if (!priorEndsCont) extra = tab.length;
+          }
+          desired = ' '.repeat(Math.max(0, prevCol - prevOp + curOp + extra));
         }
 
       // Top-level line

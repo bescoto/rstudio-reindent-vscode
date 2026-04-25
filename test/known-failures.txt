@@ -51,7 +51,6 @@ function-calls/19
 # function-declarations
 function-declarations/2
 function-declarations/4
-function-declarations/5
 function-declarations/8
 function-declarations/13
 function-declarations/14

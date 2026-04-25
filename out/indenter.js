@@ -301,6 +301,34 @@ function endsControlOpener(line) {
     }
     return /(?:^|[^\w.])(?:else|repeat)$/.test(cleaned);
 }
+/**
+ * True if `line` ends with a bracket-balanced `function(...)` with nothing
+ * after it — a function declaration whose body must live on a subsequent
+ * line. Unlike `endsControlOpener`, this relationship survives blank lines
+ * because `function()` alone is syntactically incomplete and R's parser
+ * keeps looking for a body regardless of intervening blanks.
+ */
+function endsIncompleteFunction(line) {
+    const cleaned = blankStringsAndComments(line).trimEnd();
+    if (!cleaned || !cleaned.endsWith(')'))
+        return false;
+    let depth = 0;
+    let i = cleaned.length - 1;
+    for (; i >= 0; i--) {
+        const c = cleaned[i];
+        if (c === ')')
+            depth++;
+        else if (c === '(') {
+            depth--;
+            if (depth === 0)
+                break;
+        }
+    }
+    if (i < 0)
+        return false;
+    const before = cleaned.slice(0, i).trimEnd();
+    return /\bfunction$/.test(before);
+}
 // ─── Utility ──────────────────────────────────────────────────────────────────
 function getLineIndent(line) {
     return line.match(/^(\s*)/)?.[1] ?? '';
@@ -627,7 +655,25 @@ function reindentLines(lines, opts, ctx) {
                     desired = getLineIndent(result[prevReal]) + tab;
                 }
                 else {
-                    desired = '';
+                    // `function(...)` with no body on its line is syntactically
+                    // incomplete — the next non-blank non-comment line is the body,
+                    // even across blank lines. Walk back past blanks/comments looking
+                    // for such an opener.
+                    let prevAny = idx - 1;
+                    while (prevAny >= 0) {
+                        const s = result[prevAny].trim();
+                        if (s === '' || s.startsWith('#')) {
+                            prevAny--;
+                            continue;
+                        }
+                        break;
+                    }
+                    if (prevAny >= 0 && endsIncompleteFunction(result[prevAny])) {
+                        desired = getLineIndent(result[prevAny]) + tab;
+                    }
+                    else {
+                        desired = '';
+                    }
                 }
             }
             newLine = desired + stripped;

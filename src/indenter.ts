@@ -63,6 +63,11 @@ interface BracketFrame {
                          // with an unmatched open bracket (typically `{`) — after
                          // that block closes, args indent at lineIndent (no +tab).
   lineNo: number;      // index of the line containing this bracket
+  openedOnLeadingOpLine: boolean; // true if the line containing this `(` was
+                                  // itself a leading-op continuation. Inner
+                                  // leading ops then anchor to col+tab rather
+                                  // than lineIndent+tab, since the line's
+                                  // lineIndent is already shifted.
   prevArgLine?: number;  // most recent arg line of THIS frame (for defer-to-prev).
                          // Only set from lines whose START owner was this frame;
                          // cleared on blank lines (hard boundary).
@@ -539,6 +544,10 @@ export function reindentLines(
 
     // ── Compute desired indent ───────────────────────────────────────────────
     let newLine: string;
+    // Set true when this line's indent was chosen via the leading-op rule.
+    // Brackets that open on this line will inherit this so inner leading-op
+    // continuations anchor correctly (see useLeadingOpIndent below).
+    let lineIsLeadingOp = false;
 
     // A blank line targeted by ctx.blankIndentFor falls through to the indent
     // computation so the emitted line is the expected indent string.
@@ -579,19 +588,29 @@ export function reindentLines(
       // Inside a bracket — vertical align or tab-stop
       } else if (owner !== null) {
         // Leading-operator style: a continuation line inside `(` that starts
-        // with a binary operator (|>, +, ~, …) follows the ENCLOSING scope's
-        // indent (one tab past the opener's lineIndent), not the column of
-        // the paren — ESS/RStudio treat leading operators as belonging to
-        // the outer scope rather than the call expression. Blank Ctrl+I
-        // targets get the same treatment when the prior same-depth line
-        // ended mid-expression (user is about to type an operator).
+        // with a binary operator (|>, +, ~, …) sits one tab past the opener
+        // paren's column, not at vertical-align under the first arg —
+        // ESS/RStudio treat leading operators as belonging to the outer
+        // scope rather than the call expression. Blank Ctrl+I targets get
+        // the same treatment when the prior same-depth line ended
+        // mid-expression (user is about to type an operator).
         const prevSameDepthForShift = prevIdxAtDepth.get(stack.length);
         const blankExpectsOp =
           isTargetBlank &&
           prevSameDepthForShift !== undefined &&
           endsMidExpression(result[prevSameDepthForShift]);
+        // `-` and `*` are unary-ambiguous, so they're excluded from the
+        // unconditional LEADING_OPS list. Promote them to leading-op
+        // treatment only when the prior same-depth line itself starts with
+        // a leading op — i.e., a chain is already in evidence.
+        const ambigStart = stripped[0] === '-' || stripped[0] === '*';
+        const ambigChain =
+          ambigStart &&
+          (stripped[1] === ' ' || stripped[1] === '\t') &&
+          prevSameDepthForShift !== undefined &&
+          startsWithLeadingOp(result[prevSameDepthForShift].trimStart());
         const useLeadingOpIndent =
-          (startsWithLeadingOp(stripped) || blankExpectsOp) &&
+          (startsWithLeadingOp(stripped) || blankExpectsOp || ambigChain) &&
           verticalAlign && owner.ch === '(' && !owner.hanging;
 
         if (owner.ch === '(' && owner.blockHanging) {
@@ -603,7 +622,16 @@ export function reindentLines(
           // anchors at the paren's lineIndent, not one tab deeper.
           desired = owner.lineIndent;
         } else if (useLeadingOpIndent) {
-          desired = owner.lineIndent + tab;
+          lineIsLeadingOp = true;
+          // When the enclosing `(` itself opened on a leading-op continuation
+          // line, its lineIndent is already the leading-op-shifted indent,
+          // so adding tab again under-indents. Anchor to the paren's COLUMN
+          // instead. Otherwise (the common case — `(` at start of line, or
+          // mid-line in a normal expression like `x <- (df`), the lineIndent
+          // is the right base.
+          desired = owner.openedOnLeadingOpLine
+            ? ' '.repeat(owner.col) + tab
+            : owner.lineIndent + tab;
         } else if (idx - 1 === owner.lineNo) {
           desired = (verticalAlign && owner.ch === '(' && !owner.hanging)
             ? ' '.repeat(owner.col + 1)
@@ -766,7 +794,10 @@ export function reindentLines(
           lineIndent = lastPoppedParenLineIndent;
         }
 
-        stack.push({ ch: tok.ch, col: tok.col, lineIndent, hanging, blockHanging, lineNo: idx });
+        stack.push({
+          ch: tok.ch, col: tok.col, lineIndent, hanging, blockHanging,
+          lineNo: idx, openedOnLeadingOpLine: lineIsLeadingOp,
+        });
       } else {
         const expected = MATCH_CLOSE[tok.ch];
         if (stack.length > 0 && stack[stack.length - 1].ch === expected) {

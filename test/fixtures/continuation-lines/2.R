@@ -1,7 +1,7 @@
 {
-  stuff1 %>%
-    stuff2 %>%
-    stuff3
+  foo %>%
+    bar %>%
+    baz
 } %>%
-  stuff4 %>%
-  stuff5
+  thing1 %>%
+  thing2

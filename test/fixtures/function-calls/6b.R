@@ -1,2 +1,2 @@
 `:=`(argument1,
-  argument2)
+     argument2)

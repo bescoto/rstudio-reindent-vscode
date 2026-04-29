@@ -51,6 +51,7 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const indenter_1 = require("./indenter");
+const cursor_1 = require("./cursor");
 // Language IDs recognised by VSCode for R-family files.
 // 'r'      — base R language support (e.g. REditorSupport.r extension)
 // 'rmd'    — R Markdown (some extensions use this)
@@ -124,7 +125,12 @@ function reindentLinesCommand(editor) {
     // indent for that line and move the cursor to the end of it. All other
     // blank lines in the document are still preserved unchanged.
     const cursorLine = editor.selection.active.line;
-    const onBlankLine = editor.selection.isEmpty && doc.lineAt(cursorLine).text.trim() === '';
+    const cursorCol = editor.selection.active.character;
+    const oldLineText = doc.lineAt(cursorLine).text;
+    const onBlankLine = editor.selection.isEmpty && oldLineText.trim() === '';
+    // Empty-selection on a non-blank line: we'll reposition the cursor relative
+    // to the line's non-whitespace content after the reindent.
+    const onSingleLine = editor.selection.isEmpty && !onBlankLine;
     // If nothing is selected, operate on just the current line.
     let range;
     if (editor.selection.isEmpty) {
@@ -142,13 +148,26 @@ function reindentLinesCommand(editor) {
     // Only move the cursor if an indent was actually produced (col > 0) — a
     // top-level blank line (col === 0) is left alone so Ctrl+I stays a no-op.
     const blankTargetCol = onBlankLine ? reindented[cursorLine].length : 0;
+    // Cursor target col for the single-line case: tracks the line's
+    // non-whitespace content across the indent change.
+    const singleTargetCol = onSingleLine
+        ? (0, cursor_1.adjustCursorAfterReindent)(oldLineText, reindented[cursorLine], cursorCol)
+        : 0;
+    const moveCursorTo = (col) => {
+        const pos = new vscode.Position(cursorLine, col);
+        editor.selection = new vscode.Selection(pos, pos);
+        editor.revealRange(new vscode.Range(pos, pos));
+    };
     if (edits.length === 0) {
         if (onBlankLine && blankTargetCol > 0
             && editor.selection.active.character !== blankTargetCol) {
             // Line already holds the right indent but the cursor is elsewhere on it.
-            const pos = new vscode.Position(cursorLine, blankTargetCol);
-            editor.selection = new vscode.Selection(pos, pos);
-            editor.revealRange(new vscode.Range(pos, pos));
+            moveCursorTo(blankTargetCol);
+        }
+        else if (onSingleLine && singleTargetCol !== cursorCol) {
+            // Line indent unchanged, but cursor was in the leading whitespace and
+            // should snap to the start of non-whitespace content.
+            moveCursorTo(singleTargetCol);
         }
         else {
             vscode.window.setStatusBarMessage('R Reindent: no changes', 2000);
@@ -163,9 +182,10 @@ function reindentLinesCommand(editor) {
         if (!success)
             return;
         if (onBlankLine && blankTargetCol > 0) {
-            const pos = new vscode.Position(cursorLine, blankTargetCol);
-            editor.selection = new vscode.Selection(pos, pos);
-            editor.revealRange(new vscode.Range(pos, pos));
+            moveCursorTo(blankTargetCol);
+        }
+        else if (onSingleLine) {
+            moveCursorTo(singleTargetCol);
         }
         vscode.window.setStatusBarMessage(`R Reindent: ${edits.length} line${edits.length !== 1 ? 's' : ''} changed`, 2000);
     });

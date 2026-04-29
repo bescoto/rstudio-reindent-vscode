@@ -40,6 +40,20 @@ interface BracketToken {
   col: number;
 }
 
+// State tracking strings that span lines. `null` means we're in normal code.
+// Backticks are not tracked across lines (R doesn't allow multi-line backtick
+// identifiers), but regular and raw strings can.
+type StringState =
+  | null
+  | { kind: 'str'; quote: string }
+  | { kind: 'raw'; quote: string; close: string };
+
+interface LineScan {
+  tokens: BracketToken[];
+  cleaned: string;
+  exitState: StringState;
+}
+
 interface BracketFrame {
   ch: string;          // ( [ {
   col: number;         // column in the REINDENTED line
@@ -49,6 +63,11 @@ interface BracketFrame {
                          // with an unmatched open bracket (typically `{`) — after
                          // that block closes, args indent at lineIndent (no +tab).
   lineNo: number;      // index of the line containing this bracket
+  openedOnLeadingOpLine: boolean; // true if the line containing this `(` was
+                                  // itself a leading-op continuation. Inner
+                                  // leading ops then anchor to col+tab rather
+                                  // than lineIndent+tab, since the line's
+                                  // lineIndent is already shifted.
   prevArgLine?: number;  // most recent arg line of THIS frame (for defer-to-prev).
                          // Only set from lines whose START owner was this frame;
                          // cleared on blank lines (hard boundary).
@@ -100,65 +119,58 @@ const RMD_FENCE_CLOSE = /^```\s*$/;
 // ─── Tokenizer ────────────────────────────────────────────────────────────────
 
 /**
- * Scan a single R source line and return an array of bracket tokens.
- * Strings (regular, raw, backtick) and # comments are consumed and skipped
- * so brackets inside them are invisible to the indenter.
+ * Scan a single R source line, optionally resuming an open multi-line string
+ * from the previous line. Returns:
+ *   tokens    — bracket tokens outside strings/comments
+ *   cleaned   — copy of `line` with string contents and `#` comments replaced
+ *               by spaces (column-preserving), for safe operator detection
+ *   exitState — non-null if a string is still open at end of line
  */
-function tokenizeLine(line: string): BracketToken[] {
-  const tokens: BracketToken[] = [];
-  const n = line.length;
-  let i = 0;
-
-  while (i < n) {
-    const ch = line[i];
-
-    // Line comment
-    if (ch === '#') break;
-
-    // R raw strings: r"(...)"  r'[...]'  R"{...}"  etc.
-    if ((ch === 'r' || ch === 'R') && i + 1 < n && (line[i + 1] === '"' || line[i + 1] === "'")) {
-      const q = line[i + 1];
-      let j = i + 2;
-      while (j < n && line[j] === '-') j++;
-      if (j < n && OPEN_BRACKETS.has(line[j])) {
-        const closeDelim = MATCH_OPEN[line[j]];
-        j++;
-        while (j < n && line[j] !== closeDelim) j++;
-        while (j < n && line[j] !== q) j++;
-      }
-      i = j + 1;
-      continue;
-    }
-
-    // Regular string literals: " ' `
-    if (ch === '"' || ch === "'" || ch === '`') {
-      let j = i + 1;
-      while (j < n) {
-        if (line[j] === '\\') { j += 2; continue; }
-        if (line[j] === ch)   { j++;    break; }
-        j++;
-      }
-      i = j;
-      continue;
-    }
-
-    if (OPEN_BRACKETS.has(ch))  { tokens.push({ kind: 'open',  ch, col: i }); i++; continue; }
-    if (CLOSE_BRACKETS.has(ch)) { tokens.push({ kind: 'close', ch, col: i }); i++; continue; }
-
-    i++;
-  }
-
-  return tokens;
-}
-
-/**
- * Return a copy of `line` with string contents and # comments replaced by
- * spaces, preserving column positions, for safe operator detection.
- */
-function blankStringsAndComments(line: string): string {
+function scanLine(line: string, entryState: StringState = null): LineScan {
   const chars = line.split('');
   const n = chars.length;
+  const tokens: BracketToken[] = [];
   let i = 0;
+  let state: StringState = entryState;
+
+  // Resume scanning inside a string carried over from the prior line.
+  if (state !== null) {
+    if (state.kind === 'str') {
+      const q = state.quote;
+      while (i < n) {
+        const c = chars[i];
+        if (c === '\\') {
+          chars[i] = ' ';
+          if (i + 1 < n) chars[i + 1] = ' ';
+          i += 2;
+          continue;
+        }
+        if (c === q) { chars[i] = ' '; i++; state = null; break; }
+        chars[i] = ' ';
+        i++;
+      }
+    } else {
+      const q = state.quote;
+      const close = state.close;
+      while (i < n) {
+        if (chars[i] === close) {
+          let j = i + 1;
+          while (j < n && chars[j] === '-') j++;
+          if (j < n && chars[j] === q) {
+            for (let k = i; k <= j; k++) chars[k] = ' ';
+            i = j + 1;
+            state = null;
+            break;
+          }
+        }
+        chars[i] = ' ';
+        i++;
+      }
+    }
+    if (state !== null) {
+      return { tokens, cleaned: chars.join(''), exitState: state };
+    }
+  }
 
   while (i < n) {
     const ch = chars[i];
@@ -168,6 +180,7 @@ function blankStringsAndComments(line: string): string {
       break;
     }
 
+    // R raw strings: r"(...)"  r'[...]'  R"{...}"  r"--[...]--"  etc.
     if ((ch === 'r' || ch === 'R') && i + 1 < n && (chars[i + 1] === '"' || chars[i + 1] === "'")) {
       const q = chars[i + 1];
       let j = i + 2;
@@ -175,30 +188,66 @@ function blankStringsAndComments(line: string): string {
       if (j < n && OPEN_BRACKETS.has(chars[j])) {
         const closeDelim = MATCH_OPEN[chars[j]];
         j++;
-        while (j < n && chars[j] !== closeDelim) j++;
-        while (j < n && chars[j] !== q) j++;
+        let found = false;
+        while (j < n) {
+          if (chars[j] === closeDelim) {
+            let k = j + 1;
+            while (k < n && chars[k] === '-') k++;
+            if (k < n && chars[k] === q) {
+              for (let m = i; m <= k; m++) chars[m] = ' ';
+              j = k + 1;
+              found = true;
+              break;
+            }
+          }
+          j++;
+        }
+        if (!found) {
+          for (let m = i; m < n; m++) chars[m] = ' ';
+          state = { kind: 'raw', quote: q, close: closeDelim };
+          i = n;
+        } else {
+          i = j;
+        }
+        continue;
       }
-      for (let k = i; k <= Math.min(j, n - 1); k++) chars[k] = ' ';
-      i = j + 1;
-      continue;
+      // `r` / `R` not followed by a raw-string opener — treat as ordinary char.
     }
 
     if (ch === '"' || ch === "'" || ch === '`') {
+      const q = ch;
       let j = i + 1;
+      let terminated = false;
       while (j < n) {
         if (chars[j] === '\\') { j += 2; continue; }
-        if (chars[j] === ch)   { j++;    break; }
+        if (chars[j] === q)   { j++; terminated = true; break; }
         j++;
       }
-      for (let k = i; k < Math.min(j, n); k++) chars[k] = ' ';
-      i = j;
+      const end = Math.min(j, n);
+      for (let k = i; k < end; k++) chars[k] = ' ';
+      if (!terminated && q !== '`') {
+        // Backticks don't span lines in R; only `"` and `'` carry over.
+        state = { kind: 'str', quote: q };
+      }
+      i = end;
       continue;
     }
+
+    if (OPEN_BRACKETS.has(ch))  { tokens.push({ kind: 'open',  ch, col: i }); i++; continue; }
+    if (CLOSE_BRACKETS.has(ch)) { tokens.push({ kind: 'close', ch, col: i }); i++; continue; }
 
     i++;
   }
 
-  return chars.join('');
+  return { tokens, cleaned: chars.join(''), exitState: state };
+}
+
+function tokenizeLine(line: string): BracketToken[] {
+  return scanLine(line, null).tokens;
+}
+
+function blankStringsAndComments(line: string): string {
+  return scanLine(line, null).cleaned;
 }
 
 
@@ -250,6 +299,74 @@ function lastTokenIsContinuation(line: string): boolean {
   if (pm && cleaned.endsWith('%')) return true;
 
   return false;
+}
+
+/**
+ * True if `line` ends inside an expression where the next thing would
+ * naturally be a binary operator — i.e., an unterminated expression term
+ * (identifier, literal, closing `)`/`]`), not a comma, not an open bracket,
+ * and not an already-dangling operator.
+ */
+function endsMidExpression(line: string): boolean {
+  const cleaned = blankStringsAndComments(line).trimEnd();
+  if (!cleaned) return false;
+  const last = cleaned[cleaned.length - 1];
+  if (last === ',') return false;
+  if (OPEN_BRACKETS.has(last)) return false;
+  if (lastTokenIsContinuation(line)) return false;
+  return true;
+}
+
+/**
+ * True if `line` is a control-flow opener whose body is expected on the
+ * following line — i.e., `if/for/while (...)`, `else`, `else if (...)`, or
+ * `repeat`, with no body on the same line. The next non-blank line is then
+ * the implicit body and should be indented one tab deeper than `line`.
+ *
+ * This only fires when the statement's `(...)` has actually closed on this
+ * line (bracket-balanced), so partial openers like `if (x &&` don't qualify.
+ */
+function endsControlOpener(line: string): boolean {
+  const cleaned = blankStringsAndComments(line).trimEnd();
+  if (!cleaned) return false;
+
+  if (cleaned.endsWith(')')) {
+    // Find the matching `(` by scanning backwards with a depth counter.
+    let depth = 0;
+    let i = cleaned.length - 1;
+    for (; i >= 0; i--) {
+      const c = cleaned[i];
+      if (c === ')') depth++;
+      else if (c === '(') { depth--; if (depth === 0) break; }
+    }
+    if (i < 0) return false;
+    const before = cleaned.slice(0, i).trimEnd();
+    return /\b(if|for|while)$/.test(before);
+  }
+
+  return /(?:^|[^\w.])(?:else|repeat)$/.test(cleaned);
+}
+
+/**
+ * True if `line` ends with a bracket-balanced `function(...)` with nothing
+ * after it — a function declaration whose body must live on a subsequent
+ * line. Unlike `endsControlOpener`, this relationship survives blank lines
+ * because `function()` alone is syntactically incomplete and R's parser
+ * keeps looking for a body regardless of intervening blanks.
+ */
+function endsIncompleteFunction(line: string): boolean {
+  const cleaned = blankStringsAndComments(line).trimEnd();
+  if (!cleaned || !cleaned.endsWith(')')) return false;
+  let depth = 0;
+  let i = cleaned.length - 1;
+  for (; i >= 0; i--) {
+    const c = cleaned[i];
+    if (c === ')') depth++;
+    else if (c === '(') { depth--; if (depth === 0) break; }
+  }
+  if (i < 0) return false;
+  const before = cleaned.slice(0, i).trimEnd();
+  return /\bfunction$/.test(before);
 }
 
 
@@ -399,13 +516,26 @@ export function reindentLines(
   // open across bracketed blocks (e.g. `} %>%`) and closes when a top-level
   // line ends without continuation or a blank line intervenes.
   let chainRootIdx = -1;
+  // Per-depth chain roots for continuation chains inside brackets. Consulted
+  // when indenting lines inside a blockHanging `(`, where args sit at the
+  // paren's lineIndent and a nested-major chain (e.g. `= ... ~ ...`) should
+  // open additional indent levels just like at top level.
+  const chainRootAtDepth = new Map<number, number>();
+  // Multi-line string state carried from the prior line. When non-null at the
+  // start of a line, the line BEGINS inside an open string literal — its
+  // leading whitespace is part of the string contents and must be preserved.
+  let stringState: StringState = null;
 
   for (let idx = 0; idx < lines.length; idx++) {
     const line = lines[idx];
     const stripped = line.trimStart();
+    const entryState = stringState;
+    const inString = entryState !== null;
 
-    // Track top-level status before processing this line's tokens
-    if (stack.length === 0) topLevelStarts.add(idx);
+    // Track top-level status before processing this line's tokens. A line
+    // that begins inside a string is content of the previous statement, not
+    // a new top-level start.
+    if (stack.length === 0 && !inString) topLevelStarts.add(idx);
 
     // Capture the frame that owned us at the START of the line, before any
     // bracket tokens on this line change the stack. This frame is where we
@@ -414,6 +544,10 @@ export function reindentLines(
 
     // ── Compute desired indent ───────────────────────────────────────────────
     let newLine: string;
+    // Set true when this line's indent was chosen via the leading-op rule.
+    // Brackets that open on this line will inherit this so inner leading-op
+    // continuations anchor correctly (see useLeadingOpIndent below).
+    let lineIsLeadingOp = false;
 
     // A blank line targeted by ctx.blankIndentFor falls through to the indent
     // computation so the emitted line is the expected indent string.
@@ -428,7 +562,12 @@ export function reindentLines(
     const inTargetRange = targetStart === undefined
       || (idx >= targetStart && idx <= (targetEnd as number));
 
-    if (!isTargetBlank && (idx === 0 || stripped === '')) {
+    if (inString) {
+      // Line begins inside an unterminated string from a prior line — leading
+      // whitespace is string content, leave it untouched.
+      newLine = line;
+
+    } else if (!isTargetBlank && (idx === 0 || stripped === '')) {
       newLine = line;
 
     } else if (!isTargetBlank && !inTargetRange) {
@@ -448,14 +587,31 @@ export function reindentLines(
 
       // Inside a bracket — vertical align or tab-stop
       } else if (owner !== null) {
-        // Leading-operator style: when a continuation line inside `(` starts
-        // with a binary operator (|>, +, ~, …), ESS shifts it one column past
-        // the vertical-align position so the operator visually sits left of
-        // the aligned argument content.
-        const leadingOpShift =
-          startsWithLeadingOp(stripped) &&
-          verticalAlign && owner.ch === '(' && !owner.hanging
-            ? 1 : 0;
+        // Leading-operator style: a continuation line inside `(` that starts
+        // with a binary operator (|>, +, ~, …) sits one tab past the opener
+        // paren's column, not at vertical-align under the first arg —
+        // ESS/RStudio treat leading operators as belonging to the outer
+        // scope rather than the call expression. Blank Ctrl+I targets get
+        // the same treatment when the prior same-depth line ended
+        // mid-expression (user is about to type an operator).
+        const prevSameDepthForShift = prevIdxAtDepth.get(stack.length);
+        const blankExpectsOp =
+          isTargetBlank &&
+          prevSameDepthForShift !== undefined &&
+          endsMidExpression(result[prevSameDepthForShift]);
+        // `-` and `*` are unary-ambiguous, so they're excluded from the
+        // unconditional LEADING_OPS list. Promote them to leading-op
+        // treatment only when the prior same-depth line itself starts with
+        // a leading op — i.e., a chain is already in evidence.
+        const ambigStart = stripped[0] === '-' || stripped[0] === '*';
+        const ambigChain =
+          ambigStart &&
+          (stripped[1] === ' ' || stripped[1] === '\t') &&
+          prevSameDepthForShift !== undefined &&
+          startsWithLeadingOp(result[prevSameDepthForShift].trimStart());
+        const useLeadingOpIndent =
+          (startsWithLeadingOp(stripped) || blankExpectsOp || ambigChain) &&
+          verticalAlign && owner.ch === '(' && !owner.hanging;
 
         if (owner.ch === '(' && owner.blockHanging) {
           // `(` whose line ends inside an open block: after the block closes,
@@ -465,25 +621,62 @@ export function reindentLines(
           // Lone `{` as a standalone argument inside a hanging `(`: the block
           // anchors at the paren's lineIndent, not one tab deeper.
           desired = owner.lineIndent;
+        } else if (useLeadingOpIndent) {
+          lineIsLeadingOp = true;
+          // When the enclosing `(` itself opened on a leading-op continuation
+          // line, its lineIndent is already the leading-op-shifted indent,
+          // so adding tab again under-indents. Anchor to the paren's COLUMN
+          // instead. Otherwise (the common case — `(` at start of line, or
+          // mid-line in a normal expression like `x <- (df`), the lineIndent
+          // is the right base.
+          desired = owner.openedOnLeadingOpLine
+            ? ' '.repeat(owner.col) + tab
+            : owner.lineIndent + tab;
         } else if (idx - 1 === owner.lineNo) {
           desired = (verticalAlign && owner.ch === '(' && !owner.hanging)
-            ? ' '.repeat(owner.col + 1 + leadingOpShift)
+            ? ' '.repeat(owner.col + 1)
             : owner.lineIndent + tab;
         } else if (owner.ch === '(') {
           desired = (verticalAlign && !owner.hanging)
-            ? ' '.repeat(owner.col + 1 + leadingOpShift)
+            ? ' '.repeat(owner.col + 1)
             : owner.lineIndent + tab;
         } else {
-          desired = (verticalAlign && owner.ch !== '{' && !owner.hanging)
-            ? ' '.repeat(owner.col + 1 + leadingOpShift)
-            : owner.lineIndent + tab;
+          // `[` and `{` both use tab-stop — no vertical alignment.
+          // This keeps continuation lines inside `[` from staircasing past
+          // the first inner line (which also uses tab-stop via the
+          // `idx - 1 === owner.lineNo` branch above).
+          desired = owner.lineIndent + tab;
         }
 
         // Extra tab when the previous non-blank line at this depth ended
-        // with a continuation operator.
+        // with a continuation operator. Inside a blockHanging `(` the chain
+        // acts like a top-level chain: each distinct nesting-major op in
+        // the chain opens another indent level.
         const prevSameDepth = prevIdxAtDepth.get(stack.length);
         if (prevSameDepth !== undefined && lastTokenIsContinuation(result[prevSameDepth])) {
-          desired += tab;
+          const chainRoot = chainRootAtDepth.get(stack.length);
+          if (owner.ch === '(' && owner.blockHanging
+              && chainRoot !== undefined && chainRoot < idx) {
+            const seen = new Set<string>();
+            for (let i = chainRoot; i < idx; i++) {
+              for (const op of nestingMajorsInLine(result[i])) seen.add(op);
+            }
+            desired += tab.repeat(Math.max(1, seen.size));
+          } else {
+            desired += tab;
+          }
+        }
+
+        // Previous line was a control-flow opener without a body brace
+        // (`if (cond)`, `else`, `else if (cond)`, `for (...)`, `while (...)`,
+        // `repeat`): the current line is the implicit body and sits one tab
+        // deeper than that opener. Skipped when the current line starts with
+        // `{` — a body brace aligns with the opener, it doesn't nest further.
+        if (owner.ch === '{' && stripped[0] !== '{') {
+          const prevOpener = prevIdxAtDepth.get(stack.length);
+          if (prevOpener !== undefined && endsControlOpener(result[prevOpener])) {
+            desired = getLineIndent(result[prevOpener]) + tab;
+          }
         }
 
         // Defer to the previous arg line of this same bracket frame WHEN that
@@ -492,6 +685,12 @@ export function reindentLines(
         // authoritative and a later target arg should align with it rather
         // than the algorithmic default. Adjust for leading-op shift so non-op
         // and op-led args still line up.
+        //
+        // When prev itself ends with a continuation operator we adjust the
+        // deferred column: if prev is the FIRST line of its chain, current is
+        // a chain-continuation and sits one tab deeper; if prev was already
+        // mid-chain (its own prior real line also ended with continuation),
+        // current stays flat with prev — pipe chains don't keep nesting.
         const prevArg = owner.prevArgLine;
         if (prevArg !== undefined && targetStart !== undefined
             && (prevArg < targetStart || prevArg > (targetEnd as number))) {
@@ -500,7 +699,19 @@ export function reindentLines(
           const isVA = verticalAlign && owner.ch === '(' && !owner.hanging;
           const prevOp = isVA && startsWithLeadingOp(prevLine.trimStart()) ? 1 : 0;
           const curOp  = isVA && startsWithLeadingOp(stripped) ? 1 : 0;
-          desired = ' '.repeat(Math.max(0, prevCol - prevOp + curOp));
+          let extra = 0;
+          if (lastTokenIsContinuation(prevLine)) {
+            let priorEndsCont = false;
+            for (let p = prevArg - 1; p >= 0; p--) {
+              const s = result[p].trim();
+              if (s === '') break;            // blank = chain boundary
+              if (s.startsWith('#')) continue; // comment = transparent
+              priorEndsCont = lastTokenIsContinuation(result[p]);
+              break;
+            }
+            if (!priorEndsCont) extra = tab.length;
+          }
+          desired = ' '.repeat(Math.max(0, prevCol - prevOp + curOp + extra));
         }
 
       // Top-level line
@@ -529,8 +740,25 @@ export function reindentLines(
           // Block body of the preceding statement (e.g. `function()` on one
           // line, `{` on the next). Inherit the preceding line's indent.
           desired = getLineIndent(result[prevReal]);
+        } else if (prevReal >= 0 && endsControlOpener(result[prevReal])) {
+          // Implicit body of a one-line `if/for/while/else/repeat`.
+          desired = getLineIndent(result[prevReal]) + tab;
         } else {
-          desired = '';
+          // `function(...)` with no body on its line is syntactically
+          // incomplete — the next non-blank non-comment line is the body,
+          // even across blank lines. Walk back past blanks/comments looking
+          // for such an opener.
+          let prevAny = idx - 1;
+          while (prevAny >= 0) {
+            const s = result[prevAny].trim();
+            if (s === '' || s.startsWith('#')) { prevAny--; continue; }
+            break;
+          }
+          if (prevAny >= 0 && endsIncompleteFunction(result[prevAny])) {
+            desired = getLineIndent(result[prevAny]) + tab;
+          } else {
+            desired = '';
+          }
         }
       }
 
@@ -541,13 +769,15 @@ export function reindentLines(
 
     // ── Update bracket stack from the REINDENTED line ────────────────────────
     const newIndent = getLineIndent(newLine);
-    const newLineCleaned = blankStringsAndComments(newLine);
+    const scan = scanLine(newLine, entryState);
+    const newLineCleaned = scan.cleaned;
+    stringState = scan.exitState;
     // Tracks the most recent `(` popped on this line: when a `{` is pushed
     // immediately after, the `{` is the body of that parenthesised construct
     // (e.g. `function(args) {`) and should anchor its lineIndent to that
     // construct's line, not to its own column.
     let lastPoppedParenLineIndent: string | null = null;
-    for (const tok of tokenizeLine(newLine)) {
+    for (const tok of scan.tokens) {
       if (tok.kind === 'open') {
         const remainder = newLineCleaned.slice(tok.col + 1);
         const hanging = remainder.trim() === '';
@@ -564,7 +794,10 @@ export function reindentLines(
           lineIndent = lastPoppedParenLineIndent;
         }
 
-        stack.push({ ch: tok.ch, col: tok.col, lineIndent, hanging, blockHanging, lineNo: idx });
+        stack.push({
+          ch: tok.ch, col: tok.col, lineIndent, hanging, blockHanging,
+          lineNo: idx, openedOnLeadingOpLine: lineIsLeadingOp,
+        });
       } else {
         const expected = MATCH_CLOSE[tok.ch];
         if (stack.length > 0 && stack[stack.length - 1].ch === expected) {
@@ -574,14 +807,16 @@ export function reindentLines(
       }
     }
 
-    // Update per-depth tracker. Blank line = hard boundary; comment = transparent.
+    // Update per-depth tracker. Blank line = hard boundary; comment = transparent;
+    // lines that begin inside a multi-line string are content of the prior
+    // statement, so they don't update arg-tracking either.
     if (stripped === '') {
       prevIdxAtDepth.clear();
       // Blank lines also reset every frame's defer anchor — a blank line is
       // a hard continuation boundary, so a later arg should re-align against
       // the opener rather than inheriting some pre-blank sibling's indent.
       for (const f of stack) f.prevArgLine = undefined;
-    } else if (!stripped.startsWith('#')) {
+    } else if (!stripped.startsWith('#') && !inString) {
       prevIdxAtDepth.set(stack.length, idx);
       // Record this line as the previous-arg of the frame that owned us when
       // the line began. Lines starting at top level have no owner. Comments
@@ -590,15 +825,36 @@ export function reindentLines(
     }
 
     // Update top-level chain tracking. Blank lines break the chain; comments
-    // are transparent; lines ending inside brackets preserve the chain so it
-    // can resume when the block closes.
+    // and in-string continuations are transparent; lines ending inside
+    // brackets preserve the chain so it can resume when the block closes.
     if (stripped === '') {
       chainRootIdx = -1;
-    } else if (!stripped.startsWith('#') && stack.length === 0) {
-      if (lastTokenIsContinuation(newLine)) {
+      chainRootAtDepth.clear();
+    } else if (!stripped.startsWith('#') && !inString) {
+      // A chain opens at the FIRST line involving top level that ends with a
+      // continuation operator — either a line that also ENDS at top level
+      // (classic `a %>%` → next line continues), OR a line that STARTS at
+      // top level but dives into a bracket (e.g. `x[a %>%` opens a pipe
+      // chain rooted at the `x[...` line itself). The start-of-line case
+      // keeps the chain root anchored before the bracket so when the chain
+      // re-emerges (`] %>%` → tail), the tail indents off the outermost
+      // root rather than off the re-emerging line.
+      const startedAtTop = startOwner === null;
+      const endAtTop     = stack.length === 0;
+      const endsCont     = lastTokenIsContinuation(newLine);
+      if (endsCont && (startedAtTop || endAtTop)) {
         if (chainRootIdx === -1) chainRootIdx = idx;
-      } else {
+      } else if (endAtTop && !endsCont) {
         chainRootIdx = -1;
+      }
+      // Per-depth chain tracking at end-of-line depth. Only the current
+      // depth's chain state is touched; chains at outer depths persist
+      // across intervening nested-bracket lines.
+      const endDepth = stack.length;
+      if (lastTokenIsContinuation(newLine)) {
+        if (!chainRootAtDepth.has(endDepth)) chainRootAtDepth.set(endDepth, idx);
+      } else {
+        chainRootAtDepth.delete(endDepth);
       }
     }
   }

@@ -220,14 +220,16 @@ function startsWithLeadingOp(stripped) {
     for (const op of LEADING_OPS) {
         if (stripped.startsWith(op)) {
             const after = stripped[op.length];
-            if (after === undefined || after === ' ' || after === '\t')
+            if (after === undefined || after === ' ' || after === '\t'
+                || CLOSE_BRACKETS.has(after))
                 return true;
         }
     }
     const pm = PERCENT_OP_RE.exec(stripped);
     if (pm && pm.index === 0) {
         const after = stripped[pm[0].length];
-        if (after === undefined || after === ' ' || after === '\t')
+        if (after === undefined || after === ' ' || after === '\t'
+            || CLOSE_BRACKETS.has(after))
             return true;
     }
     return false;
@@ -522,10 +524,25 @@ function reindentLines(lines, opts, ctx) {
             // } else { / } else if — align to opener's line indent (both branches)
             if (ELSE_RE.test(line) && owner !== null) {
                 desired = owner.lineIndent;
-                // Plain closing bracket — dedent to opener's line indent
+                // Plain closing bracket — dedent to opener's line indent.
+                // Exception: when the previous same-depth line ended with `,`, the
+                // closing bracket sits where the next arg would (vertical-align under
+                // the opener). This handles editor-auto-inserted `)` after a trailing
+                // comma — e.g. `bar(a,\n    )` or `baz(b,\n        ))`.
             }
             else if (CLOSE_BRACKETS.has(stripped[0])) {
-                desired = owner?.lineIndent ?? '';
+                const prevSameDepth = owner !== null
+                    ? prevIdxAtDepth.get(stack.length)
+                    : undefined;
+                const prevEndsComma = prevSameDepth !== undefined
+                    && blankStringsAndComments(result[prevSameDepth]).trimEnd().endsWith(',');
+                if (prevEndsComma && owner !== null && verticalAlign
+                    && owner.ch === '(' && !owner.hanging && !owner.blockHanging) {
+                    desired = ' '.repeat(owner.col + 1);
+                }
+                else {
+                    desired = owner?.lineIndent ?? '';
+                }
                 // Inside a bracket — vertical align or tab-stop
             }
             else if (owner !== null) {

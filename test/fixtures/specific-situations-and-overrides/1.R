@@ -3,12 +3,6 @@
 bar(a,
     )
 
-(foo |>
-   a)
-
-(baz +
-   a)
-
 bar(a,
     baz(b,
         ))

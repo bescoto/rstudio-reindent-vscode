@@ -753,8 +753,10 @@ export function reindentLines(
           const prevLine = result[prevArg];
           const prevCol  = getLineIndent(prevLine).length;
           const isVA = verticalAlign && owner.ch === '(' && !owner.hanging;
-          const prevOp = isVA && startsWithLeadingOp(prevLine.trimStart()) ? 1 : 0;
-          const curOp  = isVA && startsWithLeadingOp(stripped) ? 1 : 0;
+          const isHangingCall = owner.ch === '(' && owner.hanging && owner.isCall;
+          const opShift = isVA ? 1 : (isHangingCall ? tab.length : 0);
+          const prevOp = opShift && startsWithLeadingOp(prevLine.trimStart()) ? opShift : 0;
+          const curOp  = opShift && startsWithLeadingOp(stripped) ? opShift : 0;
           let extra = 0;
           if (lastTokenIsContinuation(prevLine)) {
             let priorEndsCont = false;

@@ -68,6 +68,11 @@ interface BracketFrame {
                                   // leading ops then anchor to col+tab rather
                                   // than lineIndent+tab, since the line's
                                   // lineIndent is already shifted.
+  isCall: boolean;     // true when `(` is a function call (preceded by an
+                       // identifier, `]`, `)`, or backtick — but not a
+                       // control-flow keyword). Function-call parens anchor
+                       // leading-op continuations to col+tab; grouping parens
+                       // anchor them to lineIndent+tab.
   prevArgLine?: number;  // most recent arg line of THIS frame (for defer-to-prev).
                          // Only set from lines whose START owner was this frame;
                          // cleared on blank lines (hard boundary).
@@ -379,6 +384,25 @@ function getLineIndent(line: string): string {
 }
 
 /**
+ * True if `(` at column `col` of the cleaned line is a function-call paren —
+ * i.e., preceded by an identifier (other than a control-flow keyword), `]`,
+ * `)`, or a backtick-quoted name. Grouping parens (`(expr)`, `<- (`, `+ (`)
+ * return false.
+ */
+function parenIsCall(cleaned: string, col: number): boolean {
+  let i = col - 1;
+  while (i >= 0 && (cleaned[i] === ' ' || cleaned[i] === '\t')) i--;
+  if (i < 0) return false;
+  const ch = cleaned[i];
+  if (ch === ']' || ch === ')' || ch === '`') return true;
+  if (!/[A-Za-z0-9._]/.test(ch)) return false;
+  let j = i;
+  while (j >= 0 && /[A-Za-z0-9._]/.test(cleaned[j])) j--;
+  const word = cleaned.slice(j + 1, i + 1);
+  return word !== 'if' && word !== 'for' && word !== 'while' && word !== 'repeat';
+}
+
+/**
  * Scan backwards from `before - 1`, returning the nearest index that is in
  * topLevelStarts and is not blank and not a pure comment line.
  * A blank line is a hard stop — returns -1 immediately.
@@ -625,9 +649,17 @@ export function reindentLines(
           (stripped[1] === ' ' || stripped[1] === '\t') &&
           prevSameDepthForShift !== undefined &&
           startsWithLeadingOp(result[prevSameDepthForShift].trimStart());
+        // When the prior same-depth line ended with `,`, the current line is
+        // a fresh argument, not a chain continuation — disable the leading-op
+        // shift so e.g. `~ arg3` after `arg2,` aligns under `arg2`, not one
+        // column to its right.
+        const prevEndsComma =
+          prevSameDepthForShift !== undefined &&
+          blankStringsAndComments(result[prevSameDepthForShift]).trimEnd().endsWith(',');
         const useLeadingOpIndent =
           (startsWithLeadingOp(stripped) || blankExpectsOp || ambigChain) &&
-          verticalAlign && owner.ch === '(' && !owner.hanging;
+          !prevEndsComma &&
+          verticalAlign && owner.ch === '(';
 
         if (owner.ch === '(' && owner.blockHanging) {
           // `(` whose line ends inside an open block: after the block closes,
@@ -639,15 +671,23 @@ export function reindentLines(
           desired = owner.lineIndent;
         } else if (useLeadingOpIndent) {
           lineIsLeadingOp = true;
-          // When the enclosing `(` itself opened on a leading-op continuation
-          // line, its lineIndent is already the leading-op-shifted indent,
-          // so adding tab again under-indents. Anchor to the paren's COLUMN
-          // instead. Otherwise (the common case — `(` at start of line, or
-          // mid-line in a normal expression like `x <- (df`), the lineIndent
-          // is the right base.
-          desired = owner.openedOnLeadingOpLine
-            ? ' '.repeat(owner.col) + tab
-            : owner.lineIndent + tab;
+          // Three cases:
+          //   - openedOnLeadingOpLine: enclosing `(` is on a line whose
+          //     lineIndent is already the leading-op-shifted indent; anchor
+          //     to the paren's COLUMN+tab so we don't shift twice.
+          //   - function-call `(` (non-hanging): leading op sits one column
+          //     past the vertical-align column, i.e. col+tab.
+          //   - hanging function-call `(`: regular content sits at
+          //     lineIndent+tab; leading op gets one extra tab past that.
+          //   - grouping `(`: leading op anchors to the surrounding scope
+          //     (lineIndent+tab) regardless of hanging.
+          if (owner.isCall && owner.hanging) {
+            desired = owner.lineIndent + tab + tab;
+          } else if (owner.openedOnLeadingOpLine || owner.isCall) {
+            desired = ' '.repeat(owner.col) + tab;
+          } else {
+            desired = owner.lineIndent + tab;
+          }
         } else if (idx - 1 === owner.lineNo) {
           desired = (verticalAlign && owner.ch === '(' && !owner.hanging)
             ? ' '.repeat(owner.col + 1)
@@ -810,9 +850,11 @@ export function reindentLines(
           lineIndent = lastPoppedParenLineIndent;
         }
 
+        const isCall = tok.ch === '(' ? parenIsCall(newLineCleaned, tok.col) : false;
         stack.push({
           ch: tok.ch, col: tok.col, lineIndent, hanging, blockHanging,
           lineNo: idx, openedOnLeadingOpLine: lineIsLeadingOp,
+          isCall,
         });
       } else {
         const expected = MATCH_CLOSE[tok.ch];

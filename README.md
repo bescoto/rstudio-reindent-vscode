@@ -5,6 +5,8 @@ auto-indent"** behaviour to R, Quarto (`.qmd`), and R Markdown (`.Rmd`) files.
 
 ## What it does
 
+![Demo of indenting extension](static/demo.gif)
+
 Reindents selected lines (or the current line) so function arguments align to
 the column immediately after the opening bracket — exactly as RStudio's
 `Ctrl+I` / `Cmd+I` "Reindent Lines" command behaves with vertical alignment
@@ -38,6 +40,27 @@ Comments between pipe steps are transparent (inherit the chain's indent).
 For `.qmd` and `.Rmd` files, **only R code blocks are touched** — prose,
 YAML front matter, and non-R fences are left completely unchanged.
 
+Coding styles using leading operators are also handled:
+
+```r
+(mtcars
+  |> filter(cyl == 4)
+  |> group_by(am)
+  |> summarise(mpg=mean(mpg),
+               wt=mean(wt)))
+```
+
+If a line is manually intended for some reason, then following lines
+defer to the established indentation level:
+
+```r
+ThisIsAnExtremelyLongFunctionName <- AnotherLongFunctionName(
+                                                argument1 + # manual indent
+                                                  part_of_arg1,
+                                                argument2)
+```
+
+
 ## Usage
 
 | Action | Shortcut |
@@ -51,6 +74,8 @@ YAML front matter, and non-R fences are left completely unchanged.
 expanded from the selection).
 
 **Without a selection:** only the current line is reindented.
+
+Consider also binding to the TAB key, for Emacs ESS-like behavior.
 
 ## Settings
 
@@ -71,21 +96,12 @@ npm install
 # 3. Compile
 npm run compile
 
+# 3b. Run tests (optional)
+npm run test
+
 # 4a. Press F5 in VSCode to launch the Extension Development Host, OR
 # 4b. Package for distribution:
 npm install -g @vscode/vsce
 vsce package          # produces r-reindent-0.1.3.vsix
 code --install-extension r-reindent-0.1.3.vsix
 ```
-
-## Algorithm
-
-A streaming single-pass implementation of RStudio's `r_indent_utils.js` logic:
-
-1. Each line is reindented *then* its bracket tokens are processed, so column
-   positions in the bracket stack always reflect the final layout.
-2. `top_level_continuations` tracks lines that end with a pipe/operator *and*
-   have an empty bracket stack at EOL — preventing operators inside function
-   calls from triggering false continuation chains.
-3. Blank lines are hard boundaries for chain propagation; comment lines are
-   transparent within a chain.

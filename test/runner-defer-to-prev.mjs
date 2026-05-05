@@ -85,6 +85,33 @@ test('defer honors leading-op shift — op-led line sits one column right of pre
   ]);
 });
 
+test('hanging paren — leading-op gets +tab over prev arg, fresh arg realigns with it', () => {
+  // From temp.r: user manually indented `manual_arg1` at col 17 inside a
+  // hanging `(`. The next two lines should be:
+  //   `+ foo,`  — leading-op continuation, one tab past prev arg → col 19
+  //   `arg2)`   — fresh comma-arg, realigns with manual_arg1     → col 17
+  // (i.e. the comma-arg ignores the intermediate continuation line and
+  // anchors back to the most recent non-continuation sibling.)
+  const expected = [
+    'VeryLongFunctionName(',
+    '                 manual_arg1',
+    '                   + foo,',
+    '                 arg2)',
+  ];
+
+  // Step 1: lines 0–1 already user-positioned; reindent only line 2.
+  let buf = [expected[0], expected[1], '+ foo,', 'arg2)'];
+  buf = reindentLines(buf, DEFAULT_OPTS, { targetStart: 2, targetEnd: 2 });
+  assert.equal(buf[2], expected[2],
+    `line 2: expected ${JSON.stringify(expected[2])}, got ${JSON.stringify(buf[2])}`);
+
+  // Step 2: with line 2 now in expected form, reindent only line 3.
+  buf[3] = 'arg2)';
+  buf = reindentLines(buf, DEFAULT_OPTS, { targetStart: 3, targetEnd: 3 });
+  assert.equal(buf[3], expected[3],
+    `line 3: expected ${JSON.stringify(expected[3])}, got ${JSON.stringify(buf[3])}`);
+});
+
 test('nested bracket — target in outer defers to outer arg, not nested one', () => {
   // Line 4 (`arg_b)`) is inside outer `(`, not inside the nested `foo(` that
   // opened on line 2 and closed on line 3. Its defer anchor should be the

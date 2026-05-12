@@ -76,7 +76,6 @@ function scanLine(line, entryState = null) {
                     continue;
                 }
                 if (c === q) {
-                    chars[i] = ' ';
                     i++;
                     state = null;
                     break;
@@ -94,7 +93,7 @@ function scanLine(line, entryState = null) {
                     while (j < n && chars[j] === '-')
                         j++;
                     if (j < n && chars[j] === q) {
-                        for (let k = i; k <= j; k++)
+                        for (let k = i; k < j; k++)
                             chars[k] = ' ';
                         i = j + 1;
                         state = null;
@@ -132,7 +131,7 @@ function scanLine(line, entryState = null) {
                         while (k < n && chars[k] === '-')
                             k++;
                         if (k < n && chars[k] === q) {
-                            for (let m = i; m <= k; m++)
+                            for (let m = i; m < k; m++)
                                 chars[m] = ' ';
                             j = k + 1;
                             found = true;
@@ -171,7 +170,8 @@ function scanLine(line, entryState = null) {
                 j++;
             }
             const end = Math.min(j, n);
-            for (let k = i; k < end; k++)
+            const blankEnd = terminated ? end - 1 : end;
+            for (let k = i; k < blankEnd; k++)
                 chars[k] = ' ';
             if (!terminated && q !== '`') {
                 // Backticks don't span lines in R; only `"` and `'` carry over.

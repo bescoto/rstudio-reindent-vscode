@@ -3,12 +3,34 @@
   "displayName": "R Reindent Lines",
   "description": "RStudio-style vertical argument alignment for R, Quarto, and R Markdown files",
   "version": "0.1.3",
+  "license": "MIT",
+  "author": "Jared Brewer and Benedict Escoto",
+  "contributors": [
+    { "name": "Jared Brewer" },
+    { "name": "Benedict Escoto" }
+  ],
   "publisher": "r-reindent",
   "engines": { "vscode": "^1.75.0" },
   "categories": ["Formatters", "Programming Languages"],
   "keywords": ["R", "Quarto", "RMarkdown", "indent", "format", "RStudio"],
   "activationEvents": [],
   "main": "./out/extension.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bescoto/rstudio-reindent-vscode/"
+  },
+  "bugs": {
+    "url": "https://github.com/bescoto/rstudio-reindent-vscode/issues"
+  },
+  "homepage": "https://github.com/bescoto/rstudio-reindent-vscode#readme",
+  "pricing": "Free",
+  "extensionKind": ["ui", "workspace"],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
   "contributes": {
     "commands": [
       {
